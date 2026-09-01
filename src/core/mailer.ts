@@ -1,0 +1,113 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import nodemailer, { type Transporter } from 'nodemailer';
+import { config } from '../config.js';
+import { logEvent } from './db.js';
+import { isSuppressed } from './subscribers.js';
+
+let transporter: Transporter | null = null;
+let sentThisRun = 0;
+
+export function resetSendCounter(): void {
+  sentThisRun = 0;
+}
+
+/**
+ * Drops the cached transporter so the next send rebuilds it from current config.
+ * Used after a transport/config change and by the resilience tests.
+ */
+export function resetTransport(): void {
+  transporter = null;
+}
+
+function getTransport(): Transporter {
+  if (transporter) return transporter;
+  if (config.mail.transport === 'smtp') {
+    if (!config.mail.smtpUrl) throw new Error('MAIL_TRANSPORT=smtp but SMTP_URL is empty');
+    transporter = nodemailer.createTransport(config.mail.smtpUrl);
+  } else {
+    // Streams messages to data/outbox/*.eml — lets you inspect exactly what would ship.
+    const dir = path.resolve(process.cwd(), config.mail.outboxDir);
+    fs.mkdirSync(dir, { recursive: true });
+    transporter = nodemailer.createTransport({ streamTransport: true, newline: 'unix', buffer: true });
+  }
+  return transporter;
+}
+
+export interface MailInput {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  unsubscribeUrl?: string;
+}
+
+export type SendOutcome =
+  | { ok: true; file?: string }
+  /** kind lets callers tell a provider outage ('error') from an expected skip. */
+  | { ok: false; kind: 'suppressed' | 'capped' | 'error'; skipped: string };
+
+export async function sendMail(msg: MailInput): Promise<SendOutcome> {
+  // Never mail a hard-bounced or complained address again: deliverability depends on it.
+  if (isSuppressed(msg.to)) {
+    logEvent('mail.suppressed', { to: msg.to, subject: msg.subject });
+    return { ok: false, kind: 'suppressed', skipped: 'address suppressed' };
+  }
+  if (sentThisRun >= config.mail.maxPerRun) {
+    logEvent('mail.capped', { to: msg.to });
+    return { ok: false, kind: 'capped', skipped: 'per-run send cap reached' };
+  }
+  sentThisRun += 1;
+
+  const headers: Record<string, string> = {};
+  if (msg.unsubscribeUrl) {
+    headers['List-Unsubscribe'] = `<${msg.unsubscribeUrl}>`;
+    headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+  }
+
+  const envelope = {
+    from: `${config.brand.name} <${config.brand.fromEmail}>`,
+    replyTo: config.brand.replyTo,
+    to: msg.to,
+    subject: msg.subject,
+    text: msg.text,
+    html: msg.html,
+    headers,
+  };
+
+  let info: any;
+  try {
+    info = await getTransport().sendMail(envelope);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    logEvent('mail.error', { to: msg.to, subject: msg.subject, detail });
+    // A 5xx SMTP rejection for this recipient is a permanent failure: suppress it.
+    if (/\b5\.\d\.\d\b|550|551|553|554/.test(detail)) {
+      const { suppress } = await import('./subscribers.js');
+      suppress(msg.to, 'hard-bounce', detail.slice(0, 300));
+    }
+    return { ok: false, kind: 'error', skipped: detail };
+  }
+
+  if (config.mail.transport === 'outbox') {
+    const dir = path.resolve(process.cwd(), config.mail.outboxDir);
+    const safe = msg.to.replace(/[^a-z0-9@._-]/gi, '_');
+    const file = path.join(dir, `${Date.now()}-${safe}.eml`);
+    fs.writeFileSync(file, info.message ?? Buffer.from(msg.text));
+    logEvent('mail.outbox', { to: msg.to, subject: msg.subject, file });
+    return { ok: true, file };
+  }
+
+  logEvent('mail.sent', { to: msg.to, subject: msg.subject, messageId: info.messageId });
+  return { ok: true };
+}
+
+export async function verifyMailConfig(): Promise<{ ok: boolean; detail: string }> {
+  if (config.mail.transport === 'outbox') return { ok: true, detail: 'outbox (no real sending)' };
+  try {
+    await getTransport().verify();
+    return { ok: true, detail: 'smtp verified' };
+  } catch (err) {
+    return { ok: false, detail: err instanceof Error ? err.message : String(err) };
+  }
+}
