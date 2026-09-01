@@ -54,15 +54,15 @@ function splitWinners(raw: string | null): string[] {
 export function listBuyers(opts: { limit?: number; minAwards?: number } = {}): BuyerSummary[] {
   const rows = db()
     .prepare(
-      `SELECT buyer_name AS name, buyer_country AS country,
+      `SELECT buyer_name AS name, buyer_slug AS slug, buyer_country AS country,
               COUNT(*) AS awards,
               COALESCE(SUM(value_amount), 0) AS total_value,
               MAX(value_currency) AS currency,
               MAX(publication_date) AS last_award,
               GROUP_CONCAT(DISTINCT SUBSTR(cpv_main, 1, 2)) AS families
        FROM notices
-       WHERE is_award = 1 AND buyer_name IS NOT NULL AND TRIM(buyer_name) <> ''
-       GROUP BY buyer_name
+       WHERE is_award = 1 AND buyer_slug IS NOT NULL
+       GROUP BY buyer_slug
        HAVING awards >= ?
        ORDER BY total_value DESC, awards DESC
        LIMIT ?`,
@@ -70,7 +70,7 @@ export function listBuyers(opts: { limit?: number; minAwards?: number } = {}): B
     .all(opts.minAwards ?? 1, Math.min(2000, opts.limit ?? 200)) as any[];
 
   return rows.map((r) => ({
-    slug: slugify(r.name),
+    slug: r.slug ?? slugify(r.name),
     name: r.name,
     country: r.country ?? null,
     awards: r.awards,
@@ -86,19 +86,22 @@ export function listBuyers(opts: { limit?: number; minAwards?: number } = {}): B
  * Market share is computed on contract value where known, else on win count.
  */
 export function supplierShare(
-  opts: { buyerName?: string; family?: string; country?: string; limit?: number } = {},
+  opts: { buyerSlug?: string; family?: string; country?: string; limit?: number; scan?: number } = {},
 ): SupplierShare[] {
   const where: string[] = ['is_award = 1', "COALESCE(winner_names, '') <> ''"];
   const params: unknown[] = [];
-  if (opts.buyerName) { where.push('buyer_name = ?'); params.push(opts.buyerName); }
+  if (opts.buyerSlug) { where.push('buyer_slug = ?'); params.push(opts.buyerSlug); }
   if (opts.family) { where.push('cpv_main LIKE ?'); params.push(`${opts.family}%`); }
   if (opts.country) { where.push('buyer_country = ?'); params.push(opts.country.toUpperCase()); }
 
+  // Hard row cap: a market-wide league table must never pull the whole table
+  // into memory just because someone requested a two-digit CPV family.
   const rows = db()
     .prepare(
-      `SELECT winner_names, value_amount FROM notices WHERE ${where.join(' AND ')}`,
+      `SELECT winner_names, value_amount FROM notices WHERE ${where.join(' AND ')}
+       ORDER BY publication_date DESC LIMIT ?`,
     )
-    .all(...(params as any[])) as any[];
+    .all(...(params as any[]), Math.min(20_000, opts.scan ?? 5_000)) as any[];
 
   const tally = new Map<string, { wins: number; totalValue: number }>();
   for (const r of rows) {
@@ -130,20 +133,44 @@ export function supplierShare(
 }
 
 export function buyerProfile(slug: string): BuyerProfile | null {
-  const summary = listBuyers({ limit: 2000 }).find((b) => b.slug === slug);
-  if (!summary) return null;
+  // Indexed single-buyer lookup. Deriving this from listBuyers() meant grouping
+  // every award notice in the database on every page view — and buyer pages are
+  // precisely the pages search-engine crawlers hit hardest.
+  const agg = db()
+    .prepare(
+      `SELECT buyer_name AS name, buyer_slug AS slug, buyer_country AS country,
+              COUNT(*) AS awards,
+              COALESCE(SUM(value_amount), 0) AS total_value,
+              MAX(value_currency) AS currency,
+              MAX(publication_date) AS last_award,
+              GROUP_CONCAT(DISTINCT SUBSTR(cpv_main, 1, 2)) AS families
+       FROM notices WHERE is_award = 1 AND buyer_slug = ?`,
+    )
+    .get(slug) as any;
+  if (!agg?.name) return null;
+
+  const summary: BuyerSummary = {
+    slug,
+    name: agg.name,
+    country: agg.country ?? null,
+    awards: agg.awards,
+    totalValue: agg.total_value ?? 0,
+    currency: agg.currency ?? null,
+    families: String(agg.families ?? '').split(',').filter(Boolean).sort(),
+    lastAwardDate: agg.last_award ?? null,
+  };
 
   const recent = db()
     .prepare(
       `SELECT id, title, publication_date, value_amount, value_currency, winner_names, url_html
-       FROM notices WHERE is_award = 1 AND buyer_name = ?
+       FROM notices WHERE is_award = 1 AND buyer_slug = ?
        ORDER BY publication_date DESC LIMIT 20`,
     )
-    .all(summary.name) as any[];
+    .all(slug) as any[];
 
   return {
     ...summary,
-    suppliers: supplierShare({ buyerName: summary.name, limit: 8 }),
+    suppliers: supplierShare({ buyerSlug: slug, limit: 8 }),
     forecasts: listForecasts({ slug, limit: 25, horizonMonths: 60 }),
     recentAwards: recent.map((r) => ({
       id: r.id,

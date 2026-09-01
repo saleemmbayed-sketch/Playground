@@ -15,7 +15,7 @@ import {
   createCheckoutSession, createPortalSession, edgeEnabled, handleWebhook, hasRadarAccess,
   stripeEnabled, type Tier,
 } from './core/billing.js';
-import { countForecasts, listForecasts } from './core/radar.js';
+import { listForecasts, showcaseForecastIds } from './core/radar.js';
 import { buyerProfile, listBuyers } from './core/intel.js';
 import {
   runAwardIngest, runBackup, runDailyDigest, runIngest, runPrune, runRadarDigest,
@@ -311,8 +311,11 @@ export function buildServer() {
     const cpv = (q.cpv ?? '').replace(/\D/g, '').slice(0, 2);
     const token = q.t ?? '';
     // Signed account link (as sent in the radar email) unlocks the full list.
+    // The scope check matters: unsubscribe tokens sit in the footer of every
+    // email, get forwarded and are followed by mail scanners. Without it, any
+    // unsubscribe link was a free pass to the paid radar.
     const claims = token ? verifyToken<{ sub: number; scope: string }>(token) : null;
-    const sub = claims?.sub ? getSubscriber(claims.sub) : null;
+    const sub = claims?.scope === 'account' && claims.sub ? getSubscriber(claims.sub) : null;
     const unlocked = hasRadarAccess(sub);
 
     const forecasts = listForecasts({
@@ -320,9 +323,14 @@ export function buildServer() {
       limit: unlocked ? 100 : 30,
       minConfidence: 0.3,
     });
-    const freePreview = 2;
+    // The free preview is a fixed global set, so re-slicing the list with a
+    // different filter never exposes a forecast that was not already public.
+    const showcase = showcaseForecastIds();
+    const shownInFull = unlocked
+      ? forecasts.length
+      : forecasts.filter((f) => showcase.has(f.id)).length;
     const cards = forecasts
-      .map((f, i) => forecastCard(f, { locked: !unlocked && i >= freePreview }))
+      .map((f) => forecastCard(f, { reveal: unlocked || showcase.has(f.id) ? 'full' : 'redacted' }))
       .join('');
 
     const body = `
@@ -339,9 +347,14 @@ export function buildServer() {
         ${cpv ? '<a class="tag" href="/radar">clear filter</a>' : ''}</p>
       ${unlocked
         ? '<div class="notice">Edge subscription active — all forecasts unlocked.</div>'
-        : `<div class="notice">Showing ${Math.min(freePreview, forecasts.length)} of
-           ${countForecasts()} live forecasts. <a href="/pricing">Unlock the rest with Edge →</a></div>`}
+        : `<div class="notice">Showing ${shownInFull} of ${forecasts.length} matching forecasts in full.
+           <a href="/pricing">Unlock the rest with Edge →</a></div>`}
       ${cards || '<p>No forecasts yet — run an award ingest to populate the radar.</p>'}
+      <p style="font-size:13px;color:#64748b;margin-top:24px">
+        Forecasts are statistical estimates derived from published TED award notices and the
+        four-year cap on framework agreements. They are not announcements, and a forecast is not a
+        commitment by any buyer to run a procurement.
+      </p>
       ${unlocked ? '' : `<div class="card" style="margin-top:24px;border-color:#1d4ed8">
         <h3>Get the full radar</h3>
         <p>Every predicted re-tender in your sectors, emailed monthly, plus buyer profiles and
@@ -406,8 +419,21 @@ export function buildServer() {
         <td>${h(a.winners.slice(0, 80) || '—')}</td><td>${h(money(a.value, a.currency))}</td></tr>`)
       .join('');
 
-    // Forecasts are the paid asset, so the profile shows one and locks the rest.
-    const cards = p.forecasts.map((f, i) => forecastCard(f, { locked: i >= 1 })).join('');
+    // Buyer pages must stay indexable and genuinely useful, but they must not
+    // become a free back door to the radar: previously every buyer page gave
+    // away one forecast, so walking /buyers unlocked the entire product.
+    // Public visitors get the facts TED already publishes (incumbent, value,
+    // award history) plus a half-year estimate; the exact predicted window and
+    // the reasoning stay behind Edge.
+    const bClaims = (req.query as Record<string, string>).t
+      ? verifyToken<{ sub: number; scope: string }>((req.query as Record<string, string>).t ?? '')
+      : null;
+    const bSub = bClaims?.scope === 'account' && bClaims.sub ? getSubscriber(bClaims.sub) : null;
+    const bUnlocked = hasRadarAccess(bSub);
+    const showcase = showcaseForecastIds();
+    const cards = p.forecasts
+      .map((f) => forecastCard(f, { reveal: bUnlocked || showcase.has(f.id) ? 'full' : 'coarse' }))
+      .join('');
 
     const body = `
       <h1 style="margin-top:32px">${h(p.name)}</h1>
@@ -417,8 +443,9 @@ export function buildServer() {
 
       <h2>Coming back to market</h2>
       ${cards || '<p>No re-tender forecast for this buyer yet.</p>'}
-      ${p.forecasts.length > 1
-        ? `<p><a class="btn" href="/pricing">Unlock all ${p.forecasts.length} forecasts for this buyer →</a></p>`
+      ${!bUnlocked && p.forecasts.length
+        ? `<p><a class="btn" href="/pricing">Get exact windows and reasoning for all
+           ${p.forecasts.length} forecast${p.forecasts.length === 1 ? '' : 's'} →</a></p>`
         : ''}
 
       <h2>Who wins here</h2>
@@ -436,6 +463,15 @@ export function buildServer() {
         <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
         <button class="btn" type="submit">Email me their new tenders</button>
       </form>
+      <p style="font-size:13px;color:#64748b;margin-top:28px">
+        Award data is reproduced from contract award notices published on Tenders Electronic Daily
+        (TED), © European Union. Forecasts are statistical estimates derived from that published
+        record — they are not announcements, and they do not imply anything about the conduct of
+        the buyer or the named suppliers. If you are named here and believe an entry is inaccurate
+        or should not be published, write to
+        <a href="mailto:${h(config.brand.replyTo)}">${h(config.brand.replyTo)}</a> and we will
+        correct or remove it.
+      </p>
       <p style="margin-top:20px"><a href="/buyers">← All contracting authorities</a></p>`;
 
     return html(reply, layout({
@@ -717,19 +753,37 @@ export function buildServer() {
     );
   });
 
+  // Bare '&' is not legal in XML; sitemap paths now include query strings.
+  const escapeXml = (v: string): string =>
+    v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // Sitemaps are requested by crawlers, not humans, and this one now enumerates
+  // every buyer as well as every notice. Rebuilding it per request would let a
+  // crawler pin the event loop, so serve a short-lived cached copy.
+  let sitemapCache: { xml: string; at: number } | null = null;
+  const SITEMAP_TTL_MS = 15 * 60 * 1000;
+
   app.get('/sitemap.xml', async (_req, reply) => {
-    const rows = listNotices({ limit: 5000 });
-    const urls = ['', '/tenders', '/radar', '/buyers', '/pricing', '/legal']
-      .concat(CPV_SECTORS.map((s2) => `/sectors/${s2.code}`))
-      .concat(CPV_SECTORS.map((s2) => `/radar?cpv=${s2.code}`))
-      // One indexable page per contracting authority — the long tail that ranks.
-      .concat(listBuyers({ limit: 2000 }).map((b) => `/buyer/${encodeURIComponent(b.slug)}`))
-      .map((p) => `<url><loc>${config.baseUrl}${p}</loc></url>`)
-      .concat(rows.map((n) => `<url><loc>${config.baseUrl}/tender/${encodeURIComponent(n.id)}</loc>${
-        n.publication_date ? `<lastmod>${n.publication_date}</lastmod>` : ''}</url>`));
-    return reply.type('application/xml').send(
-      `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`,
-    );
+    const now = Date.now();
+    if (!sitemapCache || now - sitemapCache.at > SITEMAP_TTL_MS) {
+      const rows = listNotices({ limit: 5000 });
+      const urls = ['', '/tenders', '/radar', '/buyers', '/pricing', '/legal']
+        .concat(CPV_SECTORS.map((s2) => `/sectors/${s2.code}`))
+        .concat(CPV_SECTORS.map((s2) => `/radar?cpv=${s2.code}`))
+        // One indexable page per contracting authority — the long tail that ranks.
+        .concat(listBuyers({ limit: 2000 }).map((b) => `/buyer/${encodeURIComponent(b.slug)}`))
+        .map((p) => `<url><loc>${config.baseUrl}${escapeXml(p)}</loc></url>`)
+        .concat(rows.map((n) => `<url><loc>${config.baseUrl}/tender/${encodeURIComponent(n.id)}</loc>${
+          n.publication_date ? `<lastmod>${escapeXml(n.publication_date)}</lastmod>` : ''}</url>`));
+      sitemapCache = {
+        at: now,
+        xml: `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`,
+      };
+    }
+    return reply
+      .type('application/xml')
+      .header('cache-control', 'public, max-age=900')
+      .send(sitemapCache.xml);
   });
 
   app.get('/robots.txt', async (_req, reply) =>
@@ -742,6 +796,17 @@ export function buildServer() {
       Publications Office of the European Union, and are reused under Commission Decision 2011/833/EU on the reuse
       of Commission documents. ${h(config.brand.name)} is independent and not affiliated with, or endorsed by, the
       European Union. The official notice on ted.europa.eu is always the legally binding version.</p>
+      <h2>Forecasts and named third parties</h2>
+      <p>Buyer profiles and Re-tender Radar forecasts are derived from contract award notices that
+      TED already publishes, including the names of winning suppliers. Most suppliers are companies,
+      but a sole trader's business name can also be personal data. We publish it on the basis of
+      legitimate interest in transparent public procurement, using only officially published
+      information, and we add no assessment of any person's conduct.</p>
+      <p>Forecasts are statistical estimates of when a contract may return to the market. They are
+      not announcements, they are not attributed to the buyer, and they must not be read as a
+      statement that any procurement will or will not take place. Anyone named may write to
+      <a href="mailto:${h(config.brand.replyTo)}">${h(config.brand.replyTo)}</a> to have an entry
+      corrected or removed.</p>
       <h2>What we store</h2>
       <p>Your email address, your alert filters, and a record of which notices we have already sent you (so we never
       repeat one). Payment data is handled entirely by Stripe; we never see card details.</p>

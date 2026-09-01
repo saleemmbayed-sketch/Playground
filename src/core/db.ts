@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
+import { slugify } from './slug.js';
 
 let _db: DatabaseSync | null = null;
 
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS notices (
   raw               TEXT NOT NULL,              -- original JSON for reprocessing
   winner_names      TEXT,                       -- semicolon-joined winners (award notices)
   buyer_identifier  TEXT,                       -- stable buyer registry id, when TED supplies one
+  buyer_slug        TEXT,                       -- URL slug of buyer_name, indexed for /buyer/:slug
   is_award          INTEGER NOT NULL DEFAULT 0, -- 1 = contract award notice (can-*)
   summary           TEXT,                       -- plain-language summary (LLM or fallback)
   summary_source    TEXT,                       -- 'llm' | 'heuristic'
@@ -95,7 +97,6 @@ CREATE TABLE IF NOT EXISTS forecasts (
 );
 CREATE INDEX IF NOT EXISTS idx_forecasts_window ON forecasts(window_open);
 CREATE INDEX IF NOT EXISTS idx_forecasts_slug ON forecasts(buyer_slug);
-CREATE INDEX IF NOT EXISTS idx_notices_award ON notices(is_award, cpv_main, publication_date);
 
 CREATE TABLE IF NOT EXISTS deliveries (
   subscriber_id INTEGER NOT NULL REFERENCES subscribers(id) ON DELETE CASCADE,
@@ -162,7 +163,76 @@ const MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
   { table: 'notices', column: 'winner_names', ddl: 'ALTER TABLE notices ADD COLUMN winner_names TEXT' },
   { table: 'notices', column: 'buyer_identifier', ddl: 'ALTER TABLE notices ADD COLUMN buyer_identifier TEXT' },
   { table: 'notices', column: 'is_award', ddl: 'ALTER TABLE notices ADD COLUMN is_award INTEGER NOT NULL DEFAULT 0' },
+  { table: 'notices', column: 'buyer_slug', ddl: 'ALTER TABLE notices ADD COLUMN buyer_slug TEXT' },
 ];
+
+/**
+ * Fills buyer_slug for rows written before the column existed (and for any row
+ * an older code path inserted without one). Slugs need JS transliteration, so
+ * this cannot be expressed as SQL in the migration itself. Runs once per start
+ * and is a no-op when there is nothing to fill.
+ */
+/**
+ * Indexes over columns that arrive via migration.
+ *
+ * These cannot live in SCHEMA: on a database created by an older version the
+ * column does not exist yet when SCHEMA runs, and CREATE INDEX would abort
+ * startup. Tables first, then columns, then indexes.
+ */
+const POST_MIGRATION_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_notices_award ON notices(is_award, cpv_main, publication_date)',
+  // Buyer pages are the SEO surface and get crawled hard: look them up by an
+  // indexed slug instead of grouping every award notice on each request.
+  'CREATE INDEX IF NOT EXISTS idx_notices_buyer_slug ON notices(buyer_slug, is_award)',
+  'CREATE INDEX IF NOT EXISTS idx_notices_award_buyer ON notices(is_award, buyer_name)',
+  'CREATE INDEX IF NOT EXISTS idx_forecasts_lookup ON forecasts(superseded_by, confidence, window_open)',
+];
+
+function createIndexes(d: DatabaseSync): void {
+  for (const ddl of POST_MIGRATION_INDEXES) {
+    try {
+      d.exec(ddl);
+    } catch (err) {
+      console.error(`[db] index creation failed: ${ddl}`, err);
+    }
+  }
+}
+
+function backfillBuyerSlugs(d: DatabaseSync): void {
+  const cols = d.prepare('PRAGMA table_info(notices)').all() as unknown as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'buyer_slug')) return;
+  const rows = d
+    .prepare("SELECT DISTINCT buyer_name FROM notices WHERE buyer_slug IS NULL AND buyer_name IS NOT NULL AND TRIM(buyer_name) <> ''")
+    .all() as unknown as Array<{ buyer_name: string }>;
+  if (!rows.length) return;
+  const upd = d.prepare('UPDATE notices SET buyer_slug = ? WHERE buyer_name = ? AND buyer_slug IS NULL');
+  d.exec('BEGIN');
+  try {
+    for (const r of rows) upd.run(slugify(r.buyer_name), r.buyer_name);
+    d.exec('COMMIT');
+    console.log(`[db] backfilled buyer_slug for ${rows.length} buyer name(s)`);
+  } catch (err) {
+    d.exec('ROLLBACK');
+    console.error('[db] buyer_slug backfill failed', err);
+  }
+}
+
+/**
+ * Re-derives is_award for notices ingested before the column existed.
+ *
+ * The migration defaults it to 0, so without this every award already in the
+ * archive would stay invisible to the radar — the forecaster would silently
+ * see an empty history on databases that actually hold years of awards.
+ */
+function backfillAwardFlag(d: DatabaseSync): void {
+  const cols = d.prepare('PRAGMA table_info(notices)').all() as unknown as Array<{ name: string }>;
+  if (!cols.some((c) => c.name === 'is_award')) return;
+  const res = d
+    .prepare("UPDATE notices SET is_award = 1 WHERE is_award = 0 AND LOWER(COALESCE(notice_type,'')) LIKE 'can%'")
+    .run();
+  const n = Number(res.changes ?? 0);
+  if (n > 0) console.log(`[db] backfilled is_award for ${n} award notice(s)`);
+}
 
 function migrate(d: DatabaseSync): void {
   for (const m of MIGRATIONS) {
@@ -185,6 +255,9 @@ export function db(): DatabaseSync {
   const d = new DatabaseSync(config.db.file);
   d.exec(SCHEMA);
   migrate(d);
+  createIndexes(d);
+  backfillBuyerSlugs(d);
+  backfillAwardFlag(d);
   _db = d;
   return d;
 }

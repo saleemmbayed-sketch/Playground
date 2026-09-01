@@ -202,6 +202,20 @@ upsertNotices([
   awardNotice({ id: 'aw4-2024', buyer: 'Amt für Digitales', date: '2024-02-10', cpv: '48311000', winner: 'Gamma Software SE', value: 600_000, org: 'ORG-2' }),
 ]);
 
+// More buyers than the showcase holds, so the paywalled paths are real in tests.
+upsertNotices(
+  ['Kreis Extra Eins', 'Kreis Extra Zwei', 'Kreis Extra Drei', 'Kreis Extra Vier'].flatMap((buyer, b) => {
+    // Distinct months per buyer: identical dates would give different buyers the
+    // same predicted window and make leak assertions match the wrong forecast.
+    const mm = String(3 + b).padStart(2, '0');
+    return [
+      awardNotice({ id: `x${b}a-2019`, buyer, date: `2019-${mm}-10`, cpv: '72514000', winner: `Extra ${b} GmbH`, value: 800_000 + b, org: `ORG-X${b}` }),
+      awardNotice({ id: `x${b}b-2022`, buyer, date: `2022-${mm}-10`, cpv: '72514000', winner: `Extra ${b} GmbH`, value: 900_000 + b, org: `ORG-X${b}` }),
+      awardNotice({ id: `x${b}c-2025`, buyer, date: `2025-${mm}-10`, cpv: '72514000', winner: `Extra ${b} GmbH`, value: 950_000 + b, org: `ORG-X${b}` }),
+    ];
+  }),
+);
+
 test('award notices are stored with winners and flagged as awards', () => {
   const n = awardNotice({ id: 'chk-2026', buyer: 'X', date: '2026-01-01', cpv: '72000000', winner: 'A; B', value: 5, org: 'O' });
   assert.equal(n.isAward, true);
@@ -275,7 +289,7 @@ test('an unrelated notice in the same sector does not supersede a forecast', () 
 /* ------------------------------------------------------------ intelligence */
 
 test('supplier league table splits multi-lot value across named winners', () => {
-  const shares = supplierShare({ buyerName: 'Stadt Testheim' });
+  const shares = supplierShare({ buyerSlug: 'stadt-testheim' });
   const alpha = shares.find((s) => s.name === 'Alpha IT GmbH');
   const beta = shares.find((s) => s.name === 'Beta Systems AG');
   assert.ok(alpha && beta);
@@ -333,16 +347,27 @@ test('the radar page previews a couple of forecasts and paywalls the rest', asyn
   assert.equal(res.statusCode, 200);
   assert.match(res.body, /Re-tender Radar/);
   assert.match(res.body, /Art\. 33\(1\)/);            // the mechanism is explained
-  assert.match(res.body, /Stadt Testheim/);           // the free preview is real
   assert.match(res.body, /Unlock/);                   // and the rest is sold
+  // The free preview shows real, named forecasts — the showcase set.
+  const { showcaseForecastIds: ids, resetShowcaseCache: reset } = await import('../src/core/radar.ts');
+  reset();
+  const shown = ids();
+  const named = listForecasts({ limit: 200, horizonMonths: 600, today: TODAY })
+    .filter((f) => shown.has(f.id));
+  assert.ok(named.length > 0);
+  for (const f of named) assert.ok(res.body.includes(f.buyerName), `showcase ${f.buyerName} missing`);
 });
 
 test('locked forecasts are redacted server-side, not just blurred in CSS', async () => {
   // Everything on the radar for an anonymous visitor beyond the free preview must
   // be absent from the HTML source — otherwise the paywall is decorative.
-  const { listForecasts: list } = await import('../src/core/radar.ts');
+  const { listForecasts: list, showcaseForecastIds: ids, resetShowcaseCache: reset } =
+    await import('../src/core/radar.ts');
+  reset();
+  const shown = ids();
   const all = list({ limit: 100, horizonMonths: 600, minConfidence: 0.3 });
-  const locked = all.slice(2);
+  const locked = all.filter((f) => !shown.has(f.id));
+  assert.ok(locked.length > 0, 'the corpus must contain paywalled forecasts');
   const res = await app.inject({ method: 'GET', url: '/radar' });
   assert.equal(res.statusCode, 200);
   for (const f of locked) {
@@ -354,7 +379,7 @@ test('locked forecasts are redacted server-side, not just blurred in CSS', async
 test('the radar page filters by sector', async () => {
   const res = await app.inject({ method: 'GET', url: '/radar?cpv=48' });
   assert.equal(res.statusCode, 200);
-  assert.match(res.body, /Amt für Digitales|No forecasts/);
+  assert.match(res.body, /CPV 48|No forecasts/);
 });
 
 test('buyer pages are public, indexable and canonical', async () => {
@@ -403,4 +428,154 @@ test('checkout rejects an unknown tier by falling back to Pro', async () => {
 test.after(async () => {
   await app.close();
   fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+/* ==========================================================================
+ * Red-team regressions.
+ *
+ * Each test below corresponds to a way the paywall, the mailing list or the
+ * upgrade path was actually broken when the feature was first written. They
+ * assert the attack no longer works, not merely that the happy path still does.
+ * ======================================================================== */
+
+const { showcaseForecastIds, resetShowcaseCache, halfYear } = await import('../src/core/radar.ts');
+const { runRadarDigest } = await import('../src/jobs/index.ts');
+const { signToken: sign } = await import('../src/core/tokens.ts');
+const { createSubscriber: mkSub, setSubscriberStatus: setStatus, confirmSubscriber: confirmSub } =
+  await import('../src/core/subscribers.ts');
+
+test('halfYear coarsens a date to a marketing-safe granularity', () => {
+  assert.equal(halfYear('2027-01-15'), 'H1 2027');
+  assert.equal(halfYear('2027-06-30'), 'H1 2027');
+  assert.equal(halfYear('2027-07-01'), 'H2 2027');
+  assert.equal(halfYear('2027-12-31'), 'H2 2027');
+});
+
+test('the free showcase is a fixed global set, not the head of the current list', () => {
+  resetShowcaseCache();
+  const showcase = showcaseForecastIds();
+  // Whatever slice of the radar you ask for, the unlocked ids are a subset of
+  // the same global set — so re-filtering can never widen the free tier.
+  for (const q of [{}, { cpvPrefixes: ['72'] }, { cpvPrefixes: ['48'] }, { countries: ['DEU'] }]) {
+    const slice = listForecasts({ ...q, limit: 100, horizonMonths: 600, today: TODAY });
+    for (const f of slice.filter((x) => showcase.has(x.id))) {
+      assert.ok(showcase.has(f.id));
+    }
+  }
+  assert.ok(showcase.size <= 3, 'showcase must stay small');
+});
+
+test('shuffling the CPV filter cannot harvest extra forecasts', async () => {
+  resetShowcaseCache();
+  const showcase = showcaseForecastIds();
+  const all = listForecasts({ limit: 200, horizonMonths: 600, today: TODAY });
+  const paid = all.filter((f) => !showcase.has(f.id));
+
+  const bodies: string[] = [];
+  for (const q of ['', '?cpv=72', '?cpv=48', '?cpv=30', '?cpv=79', '?cpv=71']) {
+    const res = await app.inject({ method: 'GET', url: `/radar${q}` });
+    assert.equal(res.statusCode, 200);
+    bodies.push(res.body);
+  }
+  const combined = bodies.join('\n');
+  for (const f of paid) {
+    assert.ok(!combined.includes(f.buyerName), `harvested buyer ${f.buyerName} via filters`);
+    if (f.incumbent) {
+      assert.ok(!combined.includes(f.incumbent), `harvested incumbent ${f.incumbent}`);
+    }
+  }
+});
+
+test('walking every buyer page does not give away the exact predicted windows', async () => {
+  resetShowcaseCache();
+  const showcase = showcaseForecastIds();
+  const buyers = listBuyers({ limit: 500 });
+  const paid = listForecasts({ limit: 500, horizonMonths: 600, today: TODAY })
+    .filter((f) => !showcase.has(f.id));
+
+  let combined = '';
+  for (const b of buyers) {
+    const res = await app.inject({ method: 'GET', url: `/buyer/${b.slug}` });
+    assert.equal(res.statusCode, 200);
+    combined += res.body;
+  }
+  // The buyer's own name and the public award facts are fine — that is the SEO
+  // asset. The derived forecast window is the thing being sold.
+  for (const f of paid) {
+    assert.ok(
+      !combined.includes(`${f.windowOpen} → ${f.windowClose}`),
+      `buyer page leaked the exact window for ${f.buyerName}`,
+    );
+    assert.ok(!combined.includes(f.expiryDate), `buyer page leaked the projected expiry for ${f.buyerName}`);
+  }
+  assert.match(combined, /Exact window/); // and it upsells instead
+});
+
+test('an unsubscribe token does not unlock the paid radar', async () => {
+  const sub = mkSub('scope-probe@example.com');
+  setStatus(sub.id, { status: 'active', plan: 'edge' });
+  confirmSub(sub.id);
+
+  const account = sign({ sub: sub.id, scope: 'account' });
+  const unsub = sign({ sub: sub.id, scope: 'unsub' });
+
+  const ok = await app.inject({ method: 'GET', url: `/radar?t=${account}` });
+  assert.match(ok.body, /all forecasts unlocked/, 'the real account link must still work');
+
+  // Unsubscribe links live in every email footer and get forwarded and scanned.
+  const bad = await app.inject({ method: 'GET', url: `/radar?t=${unsub}` });
+  assert.doesNotMatch(bad.body, /all forecasts unlocked/, 'unsub scope must not unlock Edge');
+
+  const forged = await app.inject({ method: 'GET', url: '/radar?t=not.a.token' });
+  assert.equal(forged.statusCode, 200);
+  assert.doesNotMatch(forged.body, /all forecasts unlocked/);
+});
+
+test('the monthly radar email is sent at most once per subscriber per period', async () => {
+  const first = await runRadarDigest({ period: '2026-09' });
+  const second = await runRadarDigest({ period: '2026-09' });
+  const third = await runRadarDigest({ period: '2026-09' });
+
+  const s1 = first.result as any;
+  const s2 = second.result as any;
+  const s3 = third.result as any;
+  assert.ok(s1.emailsSent >= 1, 'the first run must actually send');
+  assert.equal(s2.emailsSent, 0, 'a re-run in the same month must send nothing');
+  assert.equal(s3.emailsSent, 0);
+  assert.ok(s2.skippedAlreadySent >= 1);
+
+  // A new month is a new send.
+  const next = await runRadarDigest({ period: '2026-10' });
+  assert.ok((next.result as any).emailsSent >= 1, 'the next month must send again');
+});
+
+test('databases created before the radar shipped upgrade cleanly', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const legacyPath = path.join(tmp, 'legacy.db');
+  const legacy = new DatabaseSync(legacyPath);
+  legacy.exec(`CREATE TABLE notices (id TEXT PRIMARY KEY, title TEXT NOT NULL, buyer_name TEXT,
+    buyer_country TEXT, place_nuts TEXT, cpv TEXT, cpv_main TEXT, notice_type TEXT,
+    publication_date TEXT, deadline_date TEXT, value_amount REAL, value_currency TEXT,
+    description TEXT, url_html TEXT, language TEXT, raw TEXT NOT NULL,
+    first_seen_at TEXT NOT NULL, updated_at TEXT NOT NULL);`);
+  legacy.exec(`INSERT INTO notices VALUES ('legacy-1','Legacy award',
+    'Freie und Hansestadt Hamburg, Finanzbehörde','DEU','','72514000','72514000','can-standard',
+    '2024-01-15',NULL,500000,'EUR','','','deu','{}','x','x');`);
+  legacy.close();
+
+  // Re-open through the app's own bootstrap, in a child process so the module
+  // level singleton in this test file is untouched.
+  const { execFileSync } = await import('node:child_process');
+  const out = execFileSync(
+    process.execPath,
+    ['--import', 'tsx', '-e',
+      "import {db} from './src/core/db.ts';" +
+      "const r=db().prepare('SELECT buyer_slug, is_award FROM notices').get();" +
+      'console.log(JSON.stringify(r));'],
+    { env: { ...process.env, DB_FILE: legacyPath }, encoding: 'utf8' },
+  );
+  const row = JSON.parse(out.trim().split('\n').pop() as string);
+  // Slug backfilled with correct German transliteration, award flag re-derived.
+  assert.equal(row.buyer_slug, 'freie-und-hansestadt-hamburg-finanzbehoerde');
+  assert.equal(row.is_award, 1);
 });

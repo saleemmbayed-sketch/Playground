@@ -127,6 +127,19 @@ Deliverability *is* the product. A digest in spam is worth nothing.
       contain anything you'd actually bid on?"* Their answer tells you which CPV codes to
       keep and which to drop. That is the whole product roadmap for month one.
 
+## 7.1 Paywall sanity check (5 min, before you announce)
+
+The Radar is the reason Edge costs €79, so confirm it is not being given away:
+
+- [ ] Open `/radar` in a private window and count the forecasts shown in full — it must equal
+      `RADAR_SHOWCASE_COUNT` (default 3), no matter which `?cpv=` filter you apply.
+- [ ] Open two or three `/buyer/...` pages logged out. You should see the incumbent, the contract
+      value and a **half-year** estimate ("H1 2027") — never an exact `date → date` window.
+- [ ] Click an unsubscribe link from a test email and append it to `/radar?t=…`. It must **not**
+      unlock the radar; only the "Adjust filters" account link does.
+- [ ] Run `npm run cli -- radar-digest` twice. The second run must report
+      `emailsSent: 0` and `skippedAlreadySent`.
+
 ## 8. Ongoing (10 min/month)
 
 - [ ] `/admin?key=...` — job runs all green, MRR, pending confirmations.

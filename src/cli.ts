@@ -54,7 +54,8 @@ async function main(): Promise<void> {
       print('radar', await runRadarRefresh());
       break;
     case 'radar-digest':
-      print('radar-digest', await runRadarDigest({ dryRun: has('dry') }));
+      // --period 2026-09 re-sends for a specific month; otherwise once per month.
+      print('radar-digest', await runRadarDigest({ dryRun: has('dry'), period: flag('period') }));
       break;
     case 'digest-daily':
       print('digest-daily', await runDailyDigest({ dryRun: has('dry') }));

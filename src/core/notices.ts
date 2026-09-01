@@ -1,5 +1,6 @@
 import { db, nowIso } from './db.js';
 import type { Notice } from '../ingest/ted.js';
+import { slugify } from './slug.js';
 
 export interface NoticeRow {
   id: string;
@@ -32,14 +33,14 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
     INSERT INTO notices (id, title, buyer_name, buyer_country, place_nuts, cpv, cpv_main,
       notice_type, contract_nature, publication_date, deadline_date, value_amount, value_currency,
       description, url_html, language, raw, winner_names, buyer_identifier, is_award,
-      first_seen_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      buyer_slug, first_seen_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   const update = d.prepare(`
     UPDATE notices SET title=?, buyer_name=?, buyer_country=?, place_nuts=?, cpv=?, cpv_main=?,
       notice_type=?, contract_nature=?, publication_date=?, deadline_date=?, value_amount=?,
       value_currency=?, description=?, url_html=?, language=?, raw=?, winner_names=?,
-      buyer_identifier=?, is_award=?, updated_at=?
+      buyer_identifier=?, is_award=?, buyer_slug=?, updated_at=?
     WHERE id=?
   `);
 
@@ -53,12 +54,14 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
       const nuts = n.placeNuts.join(',');
       const cpv = n.cpv.join(',');
       const raw = JSON.stringify(n.raw);
+      // Stored at write time so /buyer/:slug is an indexed lookup, not a scan.
+      const buyerSlug = n.buyerName?.trim() ? slugify(n.buyerName) : null;
       if (existing.get(n.id)) {
         update.run(
           n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType, n.contractNature,
           n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency, n.description,
           n.urlHtml, n.language, raw, n.winnerNames.join('; '), n.buyerIdentifier,
-          n.isAward ? 1 : 0, ts, n.id,
+          n.isAward ? 1 : 0, buyerSlug, ts, n.id,
         );
         updated += 1;
       } else {
@@ -66,7 +69,7 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
           n.id, n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType,
           n.contractNature, n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency,
           n.description, n.urlHtml, n.language, raw, n.winnerNames.join('; '),
-          n.buyerIdentifier, n.isAward ? 1 : 0, ts, ts,
+          n.buyerIdentifier, n.isAward ? 1 : 0, buyerSlug, ts, ts,
         );
         inserted += 1;
       }

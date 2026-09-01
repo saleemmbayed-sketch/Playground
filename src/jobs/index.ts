@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
-import { db, logEvent, withJobRun } from '../core/db.js';
+import { db, kvGet, kvSet, logEvent, withJobRun } from '../core/db.js';
 import { fetchAwards, fetchNotices } from '../ingest/ted.js';
 import { recentNotices, upsertNotices } from '../core/notices.js';
 import { enrichPending } from '../core/summarize.js';
@@ -339,14 +339,30 @@ export async function runRadarRefresh() {
  * single teaser row plus a locked count — the forecast itself is the upsell,
  * because no competitor can show it to them.
  */
-export async function runRadarDigest(opts: { dryRun?: boolean } = {}) {
+export async function runRadarDigest(opts: { dryRun?: boolean; period?: string } = {}) {
   return guarded('radar.digest', async () => {
     resetSendCounter();
+    // One radar email per subscriber per month, enforced in the database.
+    //
+    // The scheduler's in-memory "already ran today" set does not survive a
+    // restart, and /ops/radar-digest can be triggered by hand at any time. The
+    // daily digest is protected by the deliveries ledger; this job had nothing,
+    // so a redeploy on the 1st would have re-mailed the entire list. Repeated
+    // unsolicited sends are the fastest way to lose a sending domain.
+    const period = opts.period ?? new Date().toISOString().slice(0, 7);
     const subs = [...payingSubscribers(), ...freeSubscribers()];
-    const stats = { recipients: subs.length, emailsSent: 0, forecastsSent: 0, teasers: 0, failed: 0, skippedEmpty: 0 };
+    const stats = {
+      recipients: subs.length, emailsSent: 0, forecastsSent: 0, teasers: 0,
+      failed: 0, skippedEmpty: 0, skippedAlreadySent: 0,
+    };
 
     for (const s of subs) {
       if (opts.dryRun) continue;
+      const sentKey = `radar:sent:${period}:${s.id}`;
+      if (kvGet(sentKey)) {
+        stats.skippedAlreadySent += 1;
+        continue;
+      }
       const full = hasRadarAccess(s);
       const all = listForecasts({
         cpvPrefixes: s.profile.cpv_prefixes ? s.profile.cpv_prefixes.split(',') : undefined,
@@ -375,6 +391,7 @@ export async function runRadarDigest(opts: { dryRun?: boolean } = {}) {
           unsubscribeUrl: payload.unsubscribeUrl,
         });
         if (res.ok) {
+          kvSet(sentKey, new Date().toISOString());
           stats.emailsSent += 1;
           stats.forecastsSent += shown.length;
           if (!full) stats.teasers += 1;

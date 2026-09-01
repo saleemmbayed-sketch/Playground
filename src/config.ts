@@ -112,6 +112,12 @@ export const config = {
     horizonMonths: int(process.env.RADAR_HORIZON_MONTHS, 18),
     /** Ignore awards below this value — noise, not pipeline. */
     minValue: int(process.env.RADAR_MIN_VALUE, 25000),
+    /**
+     * How many forecasts are shown in full to non-subscribers. This is a fixed
+     * global set (see showcaseForecastIds), not "the first N of the current
+     * list", so filtering or browsing buyer pages cannot widen it.
+     */
+    showcaseCount: int(process.env.RADAR_SHOWCASE_COUNT, 3),
   },
 
   security: {

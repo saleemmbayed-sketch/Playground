@@ -19,6 +19,9 @@
 import crypto from 'node:crypto';
 import { config } from '../config.js';
 import { db, nowIso } from './db.js';
+import { slugify } from './slug.js';
+
+export { slugify };
 
 export interface AwardRecord {
   id: string;
@@ -82,18 +85,6 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((to - from) / (1000 * 60 * 60 * 24));
 }
 
-export function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    // German transliteration must happen before diacritics are stripped,
-    // otherwise "Finanzbehörde" becomes "finanzbehorde" instead of "-behoerde".
-    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'buyer';
-}
 
 function median(values: number[]): number {
   const s = [...values].sort((a, b) => a - b);
@@ -432,4 +423,49 @@ export function listForecasts(q: RadarQuery = {}): Forecast[] {
 export function countForecasts(): number {
   const r = db().prepare('SELECT COUNT(*) AS n FROM forecasts WHERE superseded_by IS NULL').get() as any;
   return r?.n ?? 0;
+}
+
+/**
+ * The public showcase: a small, FIXED set of forecasts shown in full to
+ * everyone, everywhere.
+ *
+ * The obvious design — "reveal the first N of whatever list you are looking
+ * at" — is not a paywall. Filters and per-buyer pages each produce a different
+ * list, so a visitor can harvest the entire radar by shuffling `?cpv=` or by
+ * walking /buyers. Pinning the free set to the same globally-chosen ids makes
+ * the preview independent of how the list was sliced: browsing more pages never
+ * reveals a forecast that wasn't already free on the front page.
+ *
+ * Chosen by highest confidence so the marketing examples are also the strongest.
+ */
+const SHOWCASE_TTL_MS = 5 * 60 * 1000;
+let showcaseCache: { ids: Set<string>; at: number; limit: number } | null = null;
+
+export function showcaseForecastIds(limit = config.radar.showcaseCount): Set<string> {
+  const now = Date.now();
+  if (showcaseCache && showcaseCache.limit === limit && now - showcaseCache.at < SHOWCASE_TTL_MS) {
+    return showcaseCache.ids;
+  }
+  const rows = db()
+    .prepare(
+      `SELECT id FROM forecasts
+       WHERE superseded_by IS NULL
+       ORDER BY confidence DESC, window_open ASC, id ASC
+       LIMIT ?`,
+    )
+    .all(Math.max(0, limit)) as Array<{ id: string }>;
+  const ids = new Set(rows.map((r) => r.id));
+  showcaseCache = { ids, at: now, limit };
+  return ids;
+}
+
+/** Test hook: drop the memoised showcase set. */
+export function resetShowcaseCache(): void {
+  showcaseCache = null;
+}
+
+/** Coarsens a date to a half-year, e.g. "2027-03-14" -> "H1 2027". */
+export function halfYear(iso: string): string {
+  const month = Number(iso.slice(5, 7));
+  return `H${month <= 6 ? 1 : 2} ${iso.slice(0, 4)}`;
 }

@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { forecastStatus, type Forecast } from '../core/radar.js';
+import { forecastStatus, halfYear, type Forecast } from '../core/radar.js';
 import { escapeHtml } from '../core/templates.js';
 import type { NoticeRow } from '../core/notices.js';
 
@@ -113,37 +113,63 @@ export function tenderCard(n: NoticeRow): string {
 /* ------------------------------------------------------ Re-tender Radar --- */
 
 /**
- * A single forecast card. `locked` blurs the identifying details for visitors
- * without Edge — they see that a forecast exists, and what it is worth, but not
- * who or when. That gap is the product.
+ * How much of a forecast a given viewer may see.
+ *
+ *  full     — Edge subscribers, and the fixed public showcase set.
+ *  coarse   — buyer pages: the buyer is obviously known from the URL, and the
+ *             incumbent, value and award history are public TED facts worth
+ *             indexing. What is withheld is the derived asset: the exact
+ *             predicted window and the reasoning behind it.
+ *  redacted — the radar list: buyer and incumbent masked as well.
  */
-export function forecastCard(f: Forecast, opts: { locked?: boolean; today?: string } = {}): string {
-  const status = forecastStatus(f, opts.today);
-  const badge = {
+export type Reveal = 'full' | 'coarse' | 'redacted';
+
+const statusBadge = (f: Forecast, today?: string): string =>
+  ({
     open: '<span class="tag" style="background:#dcfce7;color:#166534">window open now</span>',
     upcoming: '<span class="tag" style="background:#e0e7ff;color:#3730a3">upcoming</span>',
     overdue: '<span class="tag" style="background:#fef3c7;color:#92400e">overdue — verify</span>',
-  }[status];
-  const conf = Math.round(f.confidence * 100);
+  })[forecastStatus(f, today)];
 
-  if (opts.locked) {
-    // Redact server-side, not just visually: a CSS blur still ships the answer in
-    // the HTML source. The preview proves a forecast exists and is worth money;
-    // the identifying details are the thing being sold.
-    const mask = (text: string): string =>
-      text.replace(/[^\s]/g, '\u2588').slice(0, 28);
+/** Masks a string server-side. A CSS blur still ships the answer in the source. */
+const mask = (text: string): string => text.replace(/[^\s]/g, '\u2588').slice(0, 28);
+
+export function forecastCard(
+  f: Forecast,
+  opts: { reveal?: Reveal; today?: string } = {},
+): string {
+  const reveal: Reveal = opts.reveal ?? 'full';
+  const badge = statusBadge(f, opts.today);
+  const conf = Math.round(f.confidence * 100);
+  const meta = `${h(f.buyerCountry ?? '??')} · CPV ${h(f.cpvFamily)} · confidence ${conf}%`;
+
+  if (reveal === 'redacted') {
     return `<div class="tender">
-      <div class="meta">${h(f.buyerCountry ?? '??')} · CPV ${h(f.cpvFamily)} · confidence ${conf}%</div>
+      <div class="meta">${meta}</div>
       <h3 style="user-select:none;color:#94a3b8">${h(mask(f.buyerName))}</h3>
-      <p>Expected back on the market <strong style="user-select:none;color:#94a3b8">${h(mask(f.windowOpen.slice(0, 7)))}</strong>
+      <p>Expected back on the market <strong>${h(halfYear(f.windowOpen))}</strong>
       · incumbent <strong style="user-select:none;color:#94a3b8">${h(mask(f.incumbent ?? 'undisclosed'))}</strong>
       · last value ${h(money(f.lastValueAmount, f.lastValueCurrency))}</p>
       <div>${badge}<a class="tag" href="/pricing">Unlock with Edge →</a></div>
     </div>`;
   }
 
+  if (reveal === 'coarse') {
+    return `<div class="tender">
+      <div class="meta">${meta}</div>
+      <h3>${h(f.buyerName)}</h3>
+      <p>Expected back on the market in <strong>${h(halfYear(f.windowOpen))}</strong>.
+      Last awarded ${h(f.lastAwardDate)} on an observed ${Math.round(f.cycleMonths)}-month cycle.</p>
+      <p style="font-size:14px;color:#475569">
+        <strong>Incumbent:</strong> ${h(f.incumbent ?? 'not disclosed')} ·
+        <strong>Last value:</strong> ${h(money(f.lastValueAmount, f.lastValueCurrency))}
+      </p>
+      <div>${badge}<a class="tag" href="/pricing">Exact window &amp; reasoning with Edge →</a></div>
+    </div>`;
+  }
+
   return `<div class="tender">
-    <div class="meta">${h(f.buyerCountry ?? '??')} · CPV ${h(f.cpvFamily)} · confidence ${conf}%</div>
+    <div class="meta">${meta}</div>
     <h3><a href="/buyer/${encodeURIComponent(f.buyerSlug)}">${h(f.buyerName)}</a></h3>
     <p>Expected back on the market <strong>${h(f.windowOpen)} → ${h(f.windowClose)}</strong>.
     Incumbent contract projected to expire ${h(f.expiryDate)}.</p>

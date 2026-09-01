@@ -65,6 +65,14 @@ Comune di Milano — CPV 72 — confidence 90%
 | **SEO** | Every contracting authority gets a `/buyer/:slug` page with award history, a supplier league table and its forecast. That is a large body of genuinely unique pages, because nobody else publishes derived re-tender intelligence. |
 | **Proof of demand** | Tenders Direct already sells "advance re-tender alerts on frameworks and DPS" as a premium feature — the category is validated. |
 
+**How the paywall actually holds.** The free tier is a *fixed global showcase* of three forecasts,
+chosen by confidence and identical on every page. The naive design — reveal the first N of whatever
+list you are viewing — is not a paywall at all: filters and per-buyer pages each produce a different
+list, so a visitor can harvest everything by shuffling `?cpv=` or walking `/buyers`. Buyer pages stay
+fully indexable and show the facts TED already publishes (incumbent, contract value, award history)
+plus a half-year estimate; the exact predicted window and the reasoning are the paid asset. Locked
+rows are redacted server-side, never merely blurred in CSS.
+
 **Honesty guardrails.** Forecasts are labelled as statistical estimates, never announcements.
 Every card shows its confidence score and the reasons behind it, a single award falls back to the
 4-year legal ceiling with visibly lower confidence, and a forecast is retired automatically once a
@@ -99,6 +107,8 @@ src/
   core/notices.ts        upsert + query layer
   core/match.ts          explainable relevance scoring (no LLM needed)
   core/radar.ts          Re-tender Radar: the forecasting engine (pure, deterministic)
+                         + the fixed public showcase set that bounds the free tier
+  core/slug.ts           buyer URL slugs (German transliteration), shared by ingest and queries
   core/intel.ts          buyer profiles and supplier league tables from award notices
   core/subscribers.ts    subscribers, filter profiles, per-user delivery ledger
   core/summarize.ts      plain-language briefs; LLM optional with a hard daily budget cap
@@ -110,10 +120,12 @@ src/
                          + radar digest, built-in scheduler
   web/views.ts           server-rendered pages, no JS framework, no build step for the frontend
   web/ratelimit.ts       in-memory rate limiting for public forms
-test/                    92 tests: normaliser, money parsing, matcher, tokens, dedupe,
+test/                    99 tests: normaliser, money parsing, matcher, tokens, dedupe,
                          opt-in gating, suppression, backups, every HTTP route,
-                         signature-verified Stripe webhooks, and the full forecasting
-                         engine (cycle detection, confidence, paywall redaction)
+                         signature-verified Stripe webhooks, the full forecasting engine
+                         (cycle detection, confidence, paywall redaction), and red-team
+                         regressions: filter-shuffling and buyer-page harvesting, token
+                         scope confusion, duplicate monthly sends, legacy DB upgrades
 ```
 
 ### The three loops that make it run itself
@@ -270,6 +282,22 @@ currently working, and CI runs it on every push. A TED change costs you precisio
 
 See the failure-mode table at the end of [LAUNCH.md](LAUNCH.md) for what breaks, how you find
 out, and what the blast radius is.
+
+---
+
+## 6.1 Hardening review (what a red team found, and what changed)
+
+The forecasting feature was reviewed adversarially after it was built. Every issue below was
+demonstrated against a running instance, fixed, and pinned with a regression test.
+
+| Lens | Finding | Fix |
+|---|---|---|
+| **Monetisation** | Walking the 12 public buyer pages recovered **every** paid forecast — the €79 tier was fully bypassable with 12 GETs. Shuffling `?cpv=` widened the radar's own free preview from 2 to 4. | Free tier is a fixed global showcase; buyer pages coarsen the window to a half-year and withhold the reasoning. |
+| **Auth** | `/radar?t=…` verified the token signature but not its **scope**, so an *unsubscribe* link — present in every email footer, forwarded and followed by mail scanners — unlocked the paid radar. | Scope must be `account`. |
+| **Deliverability** | The monthly radar email had no send ledger and the scheduler's "already ran" guard was in-memory only. Three runs sent three emails to everyone; a redeploy on the 1st would have re-mailed the whole list. | One send per subscriber per period, enforced in SQLite. |
+| **Upgrade path** | New indexes were declared in `SCHEMA`, which runs *before* column migrations — startup crashed on any pre-existing database. Legacy `can-*` rows also stayed `is_award = 0`, so years of archived awards were invisible to the forecaster. | Indexes moved after migrations; `is_award` and `buyer_slug` are backfilled on boot. |
+| **Performance** | Each buyer page ran a `GROUP BY` over every award notice to find one buyer — 16.8 ms at 8k awards, growing linearly, on precisely the pages crawlers hammer. | Indexed `buyer_slug` column: **0.23 ms** (73×) and constant in corpus size. Sitemap is cached for 15 minutes. |
+| **Legal** | Winning "suppliers" can be sole traders, i.e. personal data, and the site publishes predictions about named firms. | Basis and removal route documented on `/legal`, with a notice on every buyer and radar page. |
 
 ---
 

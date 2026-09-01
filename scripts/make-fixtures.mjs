@@ -97,8 +97,8 @@ const suppliers = [
   'Computacenter AG & Co. oHG',
 ];
 
-const monthsAgo = (m) => {
-  const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - m, 15));
+const monthsAgo = (m, day = 15) => {
+  const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - m, day));
   return d.toISOString().slice(0, 10);
 };
 
@@ -107,7 +107,11 @@ buyers.forEach(([buyer, country, nuts], b) => {
   const [deTitle, enTitle, cpv, baseValue] = subjects[b % subjects.length];
   const cycle = [36, 48, 24][b % 3];              // observed re-tender interval
   const offset = [10, 16, 22, 8][b % 4];         // months until projected expiry
-  const lastAwardMonthsAgo = cycle - offset;
+  // Jitter per buyer: real authorities do not all award in the same month, and
+  // identical dates would give every buyer an identical predicted window.
+  const jitter = (b % 5) - 2;
+  const day = 4 + ((b * 3) % 22);
+  const lastAwardMonthsAgo = cycle - offset + jitter;
   const incumbent = suppliers[b % suppliers.length];
 
   for (let k = 0; k < 3; k += 1) {
@@ -118,13 +122,13 @@ buyers.forEach(([buyer, country, nuts], b) => {
     const value = Math.round(baseValue * (0.75 + ((b * 13 + k * 7) % 50) / 100));
     awardSeq += 1;
     notices.push({
-      'publication-number': `${900000 + awardSeq * 97}-${new Date(monthsAgo(when)).getFullYear()}`,
+      'publication-number': `${900000 + awardSeq * 97}-${new Date(monthsAgo(when, day)).getFullYear()}`,
       'notice-title': {
         eng: [`Contract award: ${enTitle}`],
         deu: [`Vergabebekanntmachung: ${deTitle}`],
       },
       'notice-type': 'can-standard',
-      'publication-date': `${monthsAgo(when)}Z`,
+      'publication-date': `${monthsAgo(when, day)}Z`,
       'buyer-name': { deu: [buyer], eng: [buyer] },
       'buyer-country': [country],
       'buyer-identifier': [`ORG-${1000 + b}`],
