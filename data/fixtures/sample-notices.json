@@ -2140,5 +2140,311 @@
     "notice-language": [
       "deu"
     ]
+  },
+  {
+    "publication-number": "405754-2026",
+    "notice-title": {
+      "eng": [
+        "Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-10+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 798000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. The contracting authority Kanton Zürich, Amt für Informatik invites tenders for a contract with an estimated volume of 798,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics. Der Auftraggeber Kanton Zürich, Amt für Informatik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 798.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "405891-2026",
+    "notice-title": {
+      "eng": [
+        "Consultancy services for digital administration transformation"
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Ministerie van Binnenlandse Zaken"
+      ],
+      "eng": [
+        "Ministerie van Binnenlandse Zaken"
+      ]
+    },
+    "buyer-country": [
+      "NLD"
+    ],
+    "place-of-performance": [
+      "NL332"
+    ],
+    "classification-cpv": [
+      "72224000",
+      "79411000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-11+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 508200,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Consultancy services for digital administration transformation. The contracting authority Ministerie van Binnenlandse Zaken invites tenders for a contract with an estimated volume of 508,200 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung. Der Auftraggeber Ministerie van Binnenlandse Zaken schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 508.200 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "406028-2026",
+    "notice-title": {
+      "eng": [
+        "SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-12+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1224000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. The contracting authority Région Auvergne-Rhône-Alpes invites tenders for a contract with an estimated volume of 1,224,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung. Der Auftraggeber Région Auvergne-Rhône-Alpes schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.224.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "406165-2026",
+    "notice-title": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-13+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 535500,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. The contracting authority Comune di Milano invites tenders for a contract with an estimated volume of 535,500 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN. Der Auftraggeber Comune di Milano schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 535.500 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "406302-2026",
+    "notice-title": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-14+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 120700,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). The contracting authority Universitätsklinikum Freiburg invites tenders for a contract with an estimated volume of 120,700 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites. Der Auftraggeber Universitätsklinikum Freiburg schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 120.700 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "406439-2026",
+    "notice-title": {
+      "eng": [
+        "Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-15+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 129050,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. The contracting authority Deutsche Rentenversicherung Bund invites tenders for a contract with an estimated volume of 129,050 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz. Der Auftraggeber Deutsche Rentenversicherung Bund schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 129.050 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
   }
 ]

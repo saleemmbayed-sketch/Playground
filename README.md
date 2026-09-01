@@ -49,14 +49,13 @@ src/
   core/mailer.ts         SMTP or safe "outbox" mode; per-run send cap
   core/templates.ts      HTML + text digest emails with RFC 8058 one-click unsubscribe
   core/billing.ts        Stripe checkout, billing portal, subscription lifecycle webhook
-  core/tokens.ts         HMAC-signed settings/unsubscribe/confirm links (no passwords)
-  core/emails.ts         double opt-in confirmation, welcome and settings-link emails
-  core/provision.ts      `setup-stripe` (product/price/webhook/portal) and `doctor` preflight
+  core/tokens.ts         HMAC-signed settings/unsubscribe links (no passwords, no support load)
   jobs/index.ts          ingest, daily paid digest, weekly free digest, built-in scheduler
   web/views.ts           server-rendered pages, no JS framework, no build step for the frontend
-  web/admin.ts           operator dashboard: MRR, audience, pipeline health, manual job runs
-scripts/setup.mjs        interactive wizard that writes a complete .env
-test/                    41 tests, incl. a full HTTP end-to-end run of the commercial path
+  web/ratelimit.ts       in-memory rate limiting for public forms
+test/                    57 tests: normaliser, money parsing, matcher, tokens, dedupe,
+                         opt-in gating, suppression, backups, every HTTP route, and
+                         signature-verified Stripe webhooks
 ```
 
 ### The three loops that make it run itself
@@ -70,80 +69,72 @@ test/                    41 tests, incl. a full HTTP end-to-end run of the comme
 3. **Retention/billing loop** — Stripe handles trials, dunning, cancellation; the webhook mirrors
    status into the DB, and the digest audience is derived from that status. Nothing to reconcile.
 
-### Verified against the live TED API
+### Compliance and deliverability (built in, not bolted on)
 
-The client is written against the contract as it actually behaves today (checked September 2026),
-not as older blog posts describe it:
-
-| Detail | Reality |
-|---|---|
-| Method | `POST` only — `GET` returns *"Request method 'GET' is not supported"* |
-| Auth | None. The Search API is anonymous; only *submitting* notices needs a key |
-| Dates | `publication-date>=20260901` (YYYYMMDD). Relative helpers are not documented syntax |
-| CPV | `classification-cpv=72*` for families; `IN (...)` takes exact space-separated codes |
-| Paging | `limit` ≤ 100, `paginationMode: "PAGE_NUMBER"` |
-| Values | `total-value` **plus** a separate `total-value-cur` |
-| Deadline | the field is `deadline` |
-| Multilingual | titles/buyers arrive as `{"eng":[...],"deu":[...]}`, never plain strings |
-
-Field names are the one part that drifts. On an HTTP 400 the client **probes each field against
-the live API**, caches the working set, and carries on — a TED rename costs you one column, not
-the business. `npm run cli -- probe-fields` runs it on demand.
+- **Double opt-in.** A signup stores the address unconfirmed and sends exactly one
+  confirmation email. Nothing else is ever sent until the user clicks. Required under
+  GDPR + German UWG §7, and the strongest possible protection for sender reputation.
+- **Automatic suppression.** Hard bounces and spam complaints — via SMTP 5xx responses or
+  your ESP's webhook at `/mail/webhook` — permanently remove an address from every audience.
+- **One-click unsubscribe** (RFC 8058 `List-Unsubscribe-Post`), as Gmail and Yahoo now require.
+- **Rate limiting + honeypot** on every public form.
+- **Impressum and reuse attribution** rendered on every page and email from your env vars.
 
 ### Design decisions that keep support load near zero
 
-- **Confirmed opt-in.** Nobody enters the sending audience without clicking a confirmation link
-  — required in practice under UWG §7 / GDPR, and the best protection for your sender reputation.
 - **No passwords.** Every email carries an HMAC-signed private settings link.
 - **Silence when empty.** No "0 new results" emails — the single biggest churn driver.
 - **Never repeat a notice.** A per-subscriber delivery ledger guarantees it.
 - **Explainable matches.** Each alert says *why* it matched, so users self-tune filters instead
   of emailing you.
-- **Failure is visible, not silent.** Every job run is persisted and exposed on `/healthz`.
+- **Failure is visible, not silent.** Every job run is persisted and exposed on `/healthz`,
+  which distinguishes a quiet day from a broken one (a send failure is counted as `failed`,
+  never as "nothing to send").
+- **Failures are isolated and retried.** One refused recipient cannot abort the run for
+  everyone else, and an undelivered digest is not marked delivered — so the next run
+  catches that subscriber up automatically.
+- **Duplicate-safe billing.** Stripe retries webhooks for days; each event id is claimed
+  once, so a replay cannot double-apply a subscription change.
+- **Clean shutdown.** SIGTERM drains in-flight requests and checkpoints the SQLite WAL,
+  so redeploys and restarts never corrupt or lose the last writes.
 - **Cost guards everywhere.** Per-run email cap, daily LLM budget cap, notice cap per ingest.
+- **It tells you when it breaks.** A failed job emails the operator once per day per job.
+- **It backs itself up.** Nightly `VACUUM INTO` snapshot, 14 kept, verified by a test that
+  reopens the snapshot and reads from it.
+- **It prunes itself.** Stale notices and old logs are dropped weekly, so the box never fills.
 
 ---
 
-## 3. Operator commands
-
-```
-npm run setup                     interactive wizard, writes a complete .env
-npm run cli -- doctor             preflight-check every dependency end to end
-npm run cli -- setup-stripe       create product, price, webhook and portal automatically
-npm run cli -- probe-fields       discover which TED fields the live API accepts today
-npm run cli -- ingest --days 30   fill the archive
-npm run cli -- preview <email>    see a subscriber's scored matches without sending
-npm run cli -- test-email <addr>  send yourself the confirmation + welcome emails
-npm run cli -- stats              counts and recent job runs
-```
-
-Day to day you should not need any of them: `/admin?key=APP_SECRET` shows MRR, audience,
-pipeline health and the last job runs, and can trigger any job with a button.
-
-## 4. Run it locally in 60 seconds
+## 3. Run it locally in 60 seconds
 
 ```bash
 npm install
-cp .env.example .env          # defaults are fine for local
-echo "TED_OFFLINE=true"  >> .env
-echo "MAIL_TRANSPORT=outbox" >> .env
-echo "APP_SECRET=dev-secret"  >> .env
-
-npm run fixtures                    # realistic offline TED data
-npm run cli -- seed
-npm run cli -- add-subscriber you@example.com --cpv 72,48 --countries DEU --keywords cloud --pro
-npm run cli -- preview you@example.com     # see scored matches + reasons
-npm run cli -- digest-daily                # writes .eml files to data/outbox/
-npm run dev                                # http://localhost:3000
+npm run demo          # fixtures + seed + a paying subscriber + a generated digest
+npm run dev           # http://localhost:3000
 ```
 
-`npm test` runs the suite; `npm run typecheck` runs strict TypeScript.
+`npm run demo` prints the demo account's private settings link and writes the generated
+emails to `data/outbox/*.eml` so you can read exactly what a subscriber receives.
+
+Useful commands:
+
+```bash
+npm test                     # 57 tests, no network required
+npm run typecheck            # strict TypeScript
+npm run cli -- doctor        # pre-launch readiness check
+npm run cli -- preview you@example.com    # score today's pool for one subscriber
+npm run cli -- check-ted     # live TED API contract smoke test (needs internet)
+npm run cli                  # list every command
+```
+
+Admin dashboard: `http://localhost:3000/admin?key=$APP_SECRET`.
 
 ---
 
-## 5. Go-live runbook (one evening)
+## 4. Go-live runbook (one evening)
 
-**See [LAUNCH.md](LAUNCH.md) for the tick-box version of this.**
+> The step-by-step version with tick boxes is in **[LAUNCH.md](LAUNCH.md)**.
+> Run `npm run cli -- doctor` to have the machine check its own readiness.
 
 1. **Domain** (~€10/yr). Point an A record at your VPS.
 2. **VPS** — Hetzner CX22 ≈ €4/mo (Nuremberg/Falkenstein keeps you in EU data residency).
@@ -156,13 +147,12 @@ npm run dev                                # http://localhost:3000
 3. **Email sending** — sign up at Resend or Brevo (free tier), verify your domain, add **SPF,
    DKIM and DMARC** records. Put the SMTP URL in `SMTP_URL` and set `MAIL_TRANSPORT=smtp`.
    Deliverability *is* the product; do not skip DMARC.
-4. **Stripe** — put your secret key in `.env`, then run `npm run cli -- setup-stripe`. It creates
-   the product, the €29/mo price, the webhook endpoint with the right events and the customer
-   portal, and writes the resulting IDs back into `.env`. No dashboard clicking.
-5. **Verify everything**: `npm run cli -- doctor` — checks TED, the database, email, Stripe,
-   the scheduler, your legal details and your secrets, and tells you what is blocking launch.
-6. **First fill**: `npm run cli -- ingest --days 30` (this is your SEO corpus, do it before
-   submitting the sitemap).
+4. **Stripe** — create a €29/mo recurring price, put its ID in `STRIPE_PRICE_ID`. Add a webhook
+   endpoint at `https://yourdomain/stripe/webhook` for `checkout.session.completed`,
+   `customer.subscription.*`, `invoice.payment_failed`; copy the signing secret into
+   `STRIPE_WEBHOOK_SECRET`. Enable the Customer Portal so cancellations never reach you.
+5. **Verify live data**: `./scripts/verify-live.sh` — confirms the TED API contract still holds.
+6. **First fill**: `docker compose exec app node dist/cli.js ingest --days 14`
 7. **Legal (Germany)**: the `/legal` page renders your Impressum + privacy text from
    `LEGAL_NAME` / `LEGAL_ADDRESS`. Register as *Kleinunternehmer* if applicable; Stripe Tax or
    manual VAT handling once you cross thresholds.
@@ -177,7 +167,7 @@ curl -X POST -H "x-ops-key: $APP_SECRET" https://yourdomain/ops/digest-daily
 
 ---
 
-## 6. Getting the first paying subscribers
+## 5. Getting the first paying subscribers
 
 The machine runs itself; distribution is the part that needs you, and only at the start.
 
@@ -194,24 +184,28 @@ The machine runs itself; distribution is the part that needs you, and only at th
 
 ---
 
-## 7. Monthly maintenance (~10 min)
+## 6. Monthly maintenance (~10 min)
 
 | Check | How |
 |---|---|
-| Everything at a glance | `/admin?key=APP_SECRET` — warns you about stale ingests, outbox mode, missing Stripe |
-| Jobs still succeeding | `GET /healthz` — point UptimeRobot (free) at it |
+| Everything at a glance | `/admin?key=$APP_SECRET` — MRR, subscribers, pending opt-ins, job runs, 30-day event funnel, and a button to run any job |
+| Jobs still succeeding | `GET /healthz` — last 8 job runs, plus a `problems[]` verdict. `?strict=1` returns 503 when degraded, so an uptime monitor pages you instead of you remembering to look. |
 | TED contract unchanged | `npm run cli -- check-ted` (also runs in CI, non-blocking) |
 | Deliverability | Your ESP dashboard: bounce < 2%, complaints < 0.1% |
 | Revenue | Stripe dashboard |
 
-**The one real fragility** is TED changing field names in the Search API. The client already
-falls back to a minimal field set on HTTP 400, the normaliser tolerates missing fields, and
-`check-ted` fails loudly in CI when the shape drifts — so a schema change degrades your alerts
-rather than breaking the service.
+**The one real fragility** is TED changing its Search API. Three independent defences cover it:
+the client walks a **fallback chain of query dialects** (precise eForms syntax → set syntax →
+date-only with client-side filtering), it **degrades to a minimal field set** on HTTP 400, and
+the normaliser tolerates missing or reshaped fields. `check-ted` reports which strategy is
+currently working, and CI runs it on every push. A TED change costs you precision, not uptime.
+
+See the failure-mode table at the end of [LAUNCH.md](LAUNCH.md) for what breaks, how you find
+out, and what the blast radius is.
 
 ---
 
-## 8. Extending it
+## 7. Extending it
 
 - **More sources, same pipeline:** add a client under `src/ingest/` that returns `Notice[]`
   (UK Contracts Finder, US SAM.gov, TenderNed, bund.de). Coverage breadth is exactly what the

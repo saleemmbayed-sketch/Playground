@@ -12,5 +12,4 @@ data/outbox/
 
 *.log
 .DS_Store
-.env.bak
-.env.demo.bak
+data/backups/

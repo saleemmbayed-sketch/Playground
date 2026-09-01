@@ -10,6 +10,7 @@ export interface NoticeRow {
   cpv: string | null;
   cpv_main: string | null;
   notice_type: string | null;
+  contract_nature: string | null;
   publication_date: string | null;
   deadline_date: string | null;
   value_amount: number | null;
@@ -19,7 +20,6 @@ export interface NoticeRow {
   language: string | null;
   summary: string | null;
   summary_source: string | null;
-  source?: string;
   first_seen_at: string;
   updated_at: string;
 }
@@ -30,14 +30,14 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
   const existing = d.prepare('SELECT id FROM notices WHERE id = ?');
   const insert = d.prepare(`
     INSERT INTO notices (id, title, buyer_name, buyer_country, place_nuts, cpv, cpv_main,
-      notice_type, publication_date, deadline_date, value_amount, value_currency, description,
-      url_html, language, raw, source, first_seen_at, updated_at)
+      notice_type, contract_nature, publication_date, deadline_date, value_amount, value_currency,
+      description, url_html, language, raw, first_seen_at, updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   const update = d.prepare(`
     UPDATE notices SET title=?, buyer_name=?, buyer_country=?, place_nuts=?, cpv=?, cpv_main=?,
-      notice_type=?, publication_date=?, deadline_date=?, value_amount=?, value_currency=?,
-      description=?, url_html=?, language=?, raw=?, source=?, updated_at=?
+      notice_type=?, contract_nature=?, publication_date=?, deadline_date=?, value_amount=?,
+      value_currency=?, description=?, url_html=?, language=?, raw=?, updated_at=?
     WHERE id=?
   `);
 
@@ -53,16 +53,16 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
       const raw = JSON.stringify(n.raw);
       if (existing.get(n.id)) {
         update.run(
-          n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType,
+          n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType, n.contractNature,
           n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency, n.description,
-          n.urlHtml, n.language, raw, n.source ?? 'ted', ts, n.id,
+          n.urlHtml, n.language, raw, ts, n.id,
         );
         updated += 1;
       } else {
         insert.run(
           n.id, n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType,
-          n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency, n.description,
-          n.urlHtml, n.language, raw, n.source ?? 'ted', ts, ts,
+          n.contractNature, n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency,
+          n.description, n.urlHtml, n.language, raw, ts, ts,
         );
         inserted += 1;
       }

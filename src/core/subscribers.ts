@@ -51,55 +51,22 @@ export function getSubscriberByCustomer(customerId: string): Subscriber | null {
   );
 }
 
-export interface CreateOpts {
-  /** 'pending' until the double opt-in link is clicked. Paid signups skip straight to confirmed. */
-  status?: string;
-  signupSource?: string;
-}
-
-/** Marks a pending subscriber as confirmed. Idempotent. */
-export function confirmSubscriber(id: number): Subscriber | null {
-  const sub = getSubscriber(id);
-  if (!sub) return null;
-  if (sub.status === 'pending' || sub.status === 'unsubscribed') {
-    db()
-      .prepare('UPDATE subscribers SET status = ?, confirmed_at = ?, updated_at = ? WHERE id = ?')
-      .run('free', sub.confirmed_at ?? nowIso(), nowIso(), id);
-  } else if (!sub.confirmed_at) {
-    db().prepare('UPDATE subscribers SET confirmed_at = ?, updated_at = ? WHERE id = ?').run(nowIso(), nowIso(), id);
-  }
-  return getSubscriber(id);
-}
-
-export function markConfirmationSent(id: number): void {
-  db().prepare('UPDATE subscribers SET confirm_sent_at = ?, updated_at = ? WHERE id = ?').run(nowIso(), nowIso(), id);
-}
-
-export function createSubscriber(
-  email: string,
-  patch: Partial<typeof DEFAULT_PROFILE> = {},
-  opts: CreateOpts = {},
-): Subscriber {
+export function createSubscriber(email: string, patch: Partial<typeof DEFAULT_PROFILE> = {}): Subscriber {
   const d = db();
   const ts = nowIso();
   const clean = normalizeEmail(email);
   const existing = getSubscriberByEmail(clean);
   if (existing) {
     if (Object.keys(patch).length) updateProfile(existing.id, patch);
-    // Re-subscribing after an unsubscribe requires a fresh confirmation.
     if (existing.status === 'unsubscribed') {
-      d.prepare('UPDATE subscribers SET status = ?, updated_at = ? WHERE id = ?')
-        .run(opts.status ?? 'pending', ts, existing.id);
+      d.prepare('UPDATE subscribers SET status = ?, updated_at = ? WHERE id = ?').run('free', ts, existing.id);
     }
     return getSubscriber(existing.id)!;
   }
 
-  const status = opts.status ?? 'pending';
   const info = d
-    .prepare(
-      'INSERT INTO subscribers (email, status, plan, signup_source, confirmed_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
-    )
-    .run(clean, status, 'free', opts.signupSource ?? 'web', status === 'pending' ? null : ts, ts, ts);
+    .prepare('INSERT INTO subscribers (email, status, plan, created_at, updated_at) VALUES (?,?,?,?,?)')
+    .run(clean, 'free', 'free', ts, ts);
   const id = Number(info.lastInsertRowid);
   const p = { ...DEFAULT_PROFILE, ...patch };
   d.prepare(
@@ -148,26 +115,70 @@ export function unsubscribe(id: number): void {
   setSubscriberStatus(id, { status: 'unsubscribed' });
 }
 
-/** Subscribers entitled to paid daily alerts. */
-export function payingSubscribers(): Array<Subscriber & { profile: Profile }> {
+/**
+ * Mailable audience. Two gates are always applied:
+ *  - the address must be confirmed (double opt-in, required under GDPR/UWG in Germany)
+ *  - the address must not be suppressed (hard bounce or spam complaint)
+ * Paying customers are exempt from the confirmation gate: paying for a service is
+ * unambiguous consent to receive it, and Stripe already verified the address.
+ */
+function audience(where: string, requireConfirmed: boolean): Array<Subscriber & { profile: Profile }> {
+  const confirmGate = requireConfirmed ? 'AND s.confirmed_at IS NOT NULL' : '';
   const rows = db()
     .prepare(
-      `SELECT s.*, p.* FROM subscribers s JOIN profiles p ON p.subscriber_id = s.id
-       WHERE s.status IN ('active','trialing')`,
+      `SELECT s.*, p.* FROM subscribers s
+       JOIN profiles p ON p.subscriber_id = s.id
+       LEFT JOIN suppressions sup ON sup.email = s.email
+       WHERE ${where} ${confirmGate} AND sup.email IS NULL`,
     )
     .all() as unknown as Array<Subscriber & Profile>;
   return rows.map((r) => ({ ...(r as any), profile: r as unknown as Profile }));
 }
 
-/** Free subscribers who get the weekly teaser digest. */
+/** Subscribers entitled to paid daily alerts. */
+export function payingSubscribers(): Array<Subscriber & { profile: Profile }> {
+  return audience("s.status IN ('active','trialing')", false);
+}
+
+/** Confirmed free subscribers who get the weekly teaser digest. */
 export function freeSubscribers(): Array<Subscriber & { profile: Profile }> {
-  const rows = db()
+  return audience("s.status = 'free'", true);
+}
+
+// ---------------------------------------------------------------- opt-in
+
+export function confirmSubscriber(id: number): void {
+  db()
+    .prepare('UPDATE subscribers SET confirmed_at = COALESCE(confirmed_at, ?), updated_at = ? WHERE id = ?')
+    .run(nowIso(), nowIso(), id);
+}
+
+export function isConfirmed(id: number): boolean {
+  const row = db().prepare('SELECT confirmed_at FROM subscribers WHERE id = ?').get(id) as
+    | { confirmed_at: string | null }
+    | undefined;
+  return Boolean(row?.confirmed_at);
+}
+
+// ------------------------------------------------------------ suppressions
+
+export function suppress(email: string, reason: string, detail?: string): void {
+  db()
     .prepare(
-      `SELECT s.*, p.* FROM subscribers s JOIN profiles p ON p.subscriber_id = s.id
-       WHERE s.status = 'free'`,
+      `INSERT INTO suppressions (email, reason, detail, created_at) VALUES (?,?,?,?)
+       ON CONFLICT(email) DO UPDATE SET reason = excluded.reason, detail = excluded.detail`,
     )
-    .all() as unknown as Array<Subscriber & Profile>;
-  return rows.map((r) => ({ ...(r as any), profile: r as unknown as Profile }));
+    .run(normalizeEmail(email), reason, detail ?? null, nowIso());
+}
+
+export function isSuppressed(email: string): boolean {
+  return Boolean(
+    db().prepare('SELECT 1 AS x FROM suppressions WHERE email = ?').get(normalizeEmail(email)),
+  );
+}
+
+export function suppressionCount(): number {
+  return Number((db().prepare('SELECT COUNT(*) c FROM suppressions').get() as any).c);
 }
 
 export function alreadyDelivered(subscriberId: number, noticeIds: string[]): Set<string> {
@@ -196,20 +207,17 @@ export function recordDeliveries(subscriberId: number, items: Array<{ id: string
   }
 }
 
-/** Everyone who has confirmed and not unsubscribed — used for audience size reporting. */
-export function pendingSubscribers(): Subscriber[] {
-  return db()
-    .prepare("SELECT * FROM subscribers WHERE status = 'pending' ORDER BY created_at DESC")
-    .all() as unknown as Subscriber[];
-}
-
-export function subscriberStats(): { total: number; paying: number; free: number; pending: number } {
+export function subscriberStats(): {
+  total: number; paying: number; free: number; confirmed: number; pending: number; suppressed: number;
+} {
   const d = db();
   const g = (sql: string) => Number((d.prepare(sql).get() as any).c);
   return {
-    total: g("SELECT COUNT(*) c FROM subscribers WHERE status NOT IN ('unsubscribed','pending')"),
+    total: g("SELECT COUNT(*) c FROM subscribers WHERE status != 'unsubscribed'"),
     paying: g("SELECT COUNT(*) c FROM subscribers WHERE status IN ('active','trialing')"),
     free: g("SELECT COUNT(*) c FROM subscribers WHERE status = 'free'"),
-    pending: g("SELECT COUNT(*) c FROM subscribers WHERE status = 'pending'"),
+    confirmed: g("SELECT COUNT(*) c FROM subscribers WHERE confirmed_at IS NOT NULL AND status != 'unsubscribed'"),
+    pending: g("SELECT COUNT(*) c FROM subscribers WHERE confirmed_at IS NULL AND status = 'free'"),
+    suppressed: g('SELECT COUNT(*) c FROM suppressions'),
   };
 }

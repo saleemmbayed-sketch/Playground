@@ -29,11 +29,7 @@ export function verifyToken<T = Record<string, unknown>>(token: string): T | nul
 }
 
 export const accountUrl = (subscriberId: number): string =>
-  `${config.baseUrl}/account?t=${signToken({ sub: subscriberId, scope: 'account' }, 30)}`;
+  `${config.baseUrl}/account?t=${signToken({ sub: subscriberId, scope: 'account' })}`;
 
 export const unsubscribeUrl = (subscriberId: number): string =>
   `${config.baseUrl}/unsubscribe?t=${signToken({ sub: subscriberId, scope: 'unsub' })}`;
-
-/** Double opt-in confirmation link. Short-lived on purpose. */
-export const confirmUrl = (subscriberId: number): string =>
-  `${config.baseUrl}/confirm?t=${signToken({ sub: subscriberId, scope: 'confirm' }, 14)}`;

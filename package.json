@@ -14,13 +14,12 @@
     "cli": "tsx src/cli.ts",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "setup": "node scripts/setup.mjs",
-    "doctor": "tsx src/cli.ts doctor",
-    "fixtures": "node scripts/make-fixtures.mjs 36"
+    "demo": "node scripts/demo.mjs",
+    "doctor": "tsx src/cli.ts doctor"
   },
   "dependencies": {
     "@fastify/formbody": "^9.0.0",
-    "@fastify/static": "^10.1.3",
+    "@fastify/rate-limit": "^11.2.0",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.1",
     "nodemailer": "^7.0.9",

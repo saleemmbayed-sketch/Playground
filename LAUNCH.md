@@ -1,123 +1,128 @@
 # Launch checklist
 
-Everything below is a one-time action. Total: about 90 minutes, most of it waiting for DNS.
-Recurring cost after this: **one domain (~€10/yr) + one VPS (~€4/mo)**. Nothing else is metered
-until you pass 3,000 emails/month.
+Work top to bottom. Anything marked **BLOCKER** must be done before you send a single
+email to a real person. Total time: one focused evening. Total cost: ~€6/month.
 
-Tick these in order. Steps marked **[you]** genuinely need a human; everything else is a command.
-
----
-
-## Phase 1 — Accounts (30 min, mostly waiting)
-
-- [ ] **[you]** Register a domain. Short, spellable, `.eu` or `.de` reads as local to German buyers.
-- [ ] **[you]** Create a **Hetzner** account (or any VPS). CX22 in Nuremberg/Falkenstein, ~€4/mo,
-      keeps data in the EU which matters for your GDPR page.
-- [ ] **[you]** Create a **Resend** or **Brevo** account (free tier). Add your domain and copy the
-      **SPF, DKIM and DMARC** DNS records they give you into your registrar.
-      *Do not skip DMARC* — Gmail and Yahoo reject bulk senders without it, and deliverability is
-      the entire product.
-- [ ] **[you]** Create a **Stripe** account and complete identity verification (this is the slowest
-      step — start it first). Copy the secret key from dashboard.stripe.com/apikeys.
-- [ ] **[you]** Point an `A` record for your domain (and `www`) at the VPS IP.
-
-## Phase 2 — Deploy (15 min)
-
-```bash
-ssh root@YOUR_VPS_IP
-apt update && apt install -y docker.io docker-compose-plugin git
-git clone <this-repo> tenderping && cd tenderping
-
-npm install          # only needed if you want to run CLI commands outside Docker
-npm run setup        # interactive wizard, writes .env
-```
-
-The wizard asks for: your URL, brand, legal name/address, CPV families, countries, SMTP URL,
-Stripe key. It generates a strong `APP_SECRET` for you.
-
-- [ ] Edit `Caddyfile`, replacing `tenderping.eu` with your domain (2 places).
-- [ ] `docker compose up -d` — Caddy issues TLS certificates automatically.
-
-## Phase 3 — Provision Stripe (2 min, automated)
-
-```bash
-npm run cli -- setup-stripe
-```
-
-Creates the product, the €29/mo recurring price, the webhook endpoint pointing at
-`https://yourdomain/stripe/webhook` with the right events, and the customer portal
-(so cancellations never reach your inbox). It writes `STRIPE_PRICE_ID` and
-`STRIPE_WEBHOOK_SECRET` straight into `.env`. Re-running it is safe — it reuses what exists.
-
-- [ ] `docker compose restart app` to load the new values.
-- [ ] **[you]** In Stripe, switch from test mode to live mode when you are ready to charge.
-
-## Phase 4 — Fill the archive and verify (10 min)
-
-```bash
-npm run cli -- probe-fields         # confirms which TED fields are live today
-npm run cli -- ingest --days 30     # ~2-4k notices; this is your SEO corpus
-npm run cli -- doctor               # preflight: every dependency, end to end
-```
-
-`doctor` must show **no blocking issues**. Warnings about archive depth disappear after ingest.
-
-- [ ] `npm run cli -- test-email you@yourdomain.com` — then check **inbox *and* spam**.
-      If it lands in spam, your DNS records are not right yet. Fix that before sending to anyone.
-- [ ] Visit `https://yourdomain/admin?key=YOUR_APP_SECRET` — bookmark it. This is your whole
-      back office.
-- [ ] **[you]** Sign up on your own site with a personal address and click the confirmation link.
-      That is the exact experience a customer gets.
-
-## Phase 5 — Get found (30 min)
-
-- [ ] **[you]** Google Search Console: add the domain, verify via DNS TXT, submit
-      `https://yourdomain/sitemap.xml`.
-- [ ] **[you]** Bing Webmaster Tools: same (it also feeds DuckDuckGo).
-- [ ] **[you]** Point **UptimeRobot** (free) at `https://yourdomain/healthz` every 5 minutes with
-      email alerts. This is your only monitoring and it is enough.
-- [ ] **[you]** Set a calendar reminder: *first of the month, open /admin, run doctor.*
-
-## Phase 6 — First customers
-
-The machine runs itself from here. This is the only part that needs you, and only at the start.
-
-- [ ] Ingest award notices (`can-standard`) for your sectors — they name companies **already
-      bidding** on exactly the contracts you monitor. That is a legitimate, pre-qualified list.
-      Personal, non-templated emails only; a cold blast will burn your sending domain.
-- [ ] Post the free weekly digest where German IT SMEs already are: Bitkom and BVMW groups,
-      IT-Mittelstand LinkedIn groups, freelance/Ausschreibung communities.
-- [ ] Give the free tier away generously. Match quality is the only thing that converts, and the
-      only way to show it is to let people see it in their inbox.
+Run `npm run cli -- doctor` at any point — it mechanically checks most of section 2 and
+exits non-zero if something would break in production.
 
 ---
 
-## What "done" looks like
+## 1. Accounts and assets (≈45 min)
 
-| Signal | Where to check |
-|---|---|
-| Pipeline alive | `/admin` shows an ingest run in the last 24h |
-| Emails delivering | ESP dashboard: bounce < 2%, complaints < 0.1% |
-| Archive growing | `/tenders` page count climbing daily |
-| Search picking it up | Search Console impressions after ~2–6 weeks |
-| Revenue | Stripe dashboard, mirrored as MRR on `/admin` |
+| Item | Where | Cost | Notes |
+|---|---|---|---|
+| Domain | Namecheap / INWX / Cloudflare | ~€10/yr | Short, spellable. `.eu` or `.de` reads trustworthy for this audience. |
+| VPS | Hetzner CX22 (Nuremberg/Falkenstein) | €4.35/mo | EU data residency matters when your customers are public-sector suppliers. |
+| Email sending | Resend or Brevo | €0 (3k/mo free) | You will not exceed the free tier until ~300 subscribers. |
+| Stripe account | stripe.com | €0 + 1.5% + €0.25/txn | Needs your real legal identity for payouts. |
+| GitHub repo | this repo | €0 | Copy `ci/github-actions-ci.yml` to `.github/workflows/ci.yml`. |
 
-## If something breaks
+---
 
-| Symptom | Cause | Fix |
+## 2. Configure and deploy (≈45 min)
+
+```bash
+git clone <your repo> tenderping && cd tenderping
+cp .env.example .env
+openssl rand -hex 32          # paste into APP_SECRET
+$EDITOR .env                  # BASE_URL, brand, LEGAL_*, SMTP_URL, STRIPE_*
+$EDITOR Caddyfile             # your domain, twice
+docker compose up -d
+docker compose exec app node dist/cli.js doctor
+```
+
+- [ ] **BLOCKER** `APP_SECRET` is a fresh random 32-byte hex value. It signs every
+      unsubscribe/settings link and guards `/admin` and `/ops/*`. Never reuse the default.
+- [ ] **BLOCKER** `BASE_URL` is your real `https://` domain, no trailing slash.
+- [ ] **BLOCKER** `LEGAL_NAME` and `LEGAL_ADDRESS` are your actual Impressum details
+      (German law requires them on the site and in commercial email).
+- [ ] DNS A record → VPS IP; Caddy will issue TLS automatically on first request.
+- [ ] `curl https://yourdomain/healthz` returns `ok: true`.
+- [ ] Free uptime monitor (UptimeRobot / Better Stack) pointed at
+      `https://yourdomain/healthz?strict=1` every 5 min. It returns **503** when the
+      ingest is stale (>36h), a job failed, or a digest could not be delivered — which is
+      the only alarm you actually need for this business.
+
+## 3. Email deliverability (≈30 min) — do not skip
+
+Deliverability *is* the product. A digest in spam is worth nothing.
+
+- [ ] **BLOCKER** SPF record published for your sending domain.
+- [ ] **BLOCKER** DKIM record published (your ESP gives you the exact CNAME/TXT).
+- [ ] **BLOCKER** DMARC record: start with `v=DMARC1; p=none; rua=mailto:you@domain`.
+- [ ] `MAIL_TRANSPORT=smtp` and `SMTP_URL` set; `doctor` reports `smtp verified`.
+- [ ] Point your ESP's bounce/complaint webhook at
+      `https://yourdomain/mail/webhook?key=YOUR_APP_SECRET` so hard bounces are
+      suppressed automatically.
+- [ ] Send yourself a test: `docker compose exec app node dist/cli.js add-subscriber you@you.com --pro`
+      then `... digest-daily`. Check it lands in **Inbox**, not Promotions/Spam.
+- [ ] Confirm the email shows a working unsubscribe link and your postal address.
+
+## 4. Billing (≈20 min)
+
+- [ ] Stripe product created: recurring, €29/month. Copy the **price ID** → `STRIPE_PRICE_ID`.
+- [ ] **BLOCKER** Webhook endpoint added in Stripe → `https://yourdomain/stripe/webhook`,
+      events: `checkout.session.completed`, `customer.subscription.created`,
+      `customer.subscription.updated`, `customer.subscription.deleted`,
+      `invoice.payment_failed`. Signing secret → `STRIPE_WEBHOOK_SECRET`.
+      *Without this, people can pay and never get activated.*
+- [ ] Customer Portal enabled in Stripe settings (so cancellations never reach your inbox).
+- [ ] Run one real end-to-end test in Stripe **test mode**: subscribe → check the row in
+      `/admin` flips to `trialing` → cancel in the portal → check it flips to `canceled`.
+- [ ] Switch to live keys, then repeat the checkout once with a real card and refund yourself.
+
+## 5. Data (≈15 min)
+
+- [ ] `TED_OFFLINE=false`.
+- [ ] `./scripts/verify-live.sh` — confirms the live TED API contract still holds.
+      This is the one thing this repo could not test in the build sandbox.
+- [ ] Backfill the archive so search engines find a real corpus:
+      `docker compose exec app node dist/cli.js ingest --days 30`
+- [ ] `docker compose exec app node dist/cli.js stats` shows a few thousand notices.
+- [ ] Tune `TED_CPV_FAMILIES` / `TED_COUNTRIES` to the niche you actually want to sell to.
+      Narrower = better match quality = lower churn.
+
+## 6. Legal (Germany) (≈30 min)
+
+- [ ] `/legal` page shows correct Impressum + privacy text (rendered from your env vars).
+- [ ] Double opt-in is on by default — do not disable it. Confirmed addresses only.
+- [ ] Decide *Kleinunternehmerregelung* (§19 UStG) vs regular VAT with your tax advisor.
+      Under Kleinunternehmer you must **not** show VAT on invoices.
+- [ ] If you sell to consumers rather than businesses, add a Widerrufsbelehrung. Selling
+      B2B only (which this is) keeps that simpler — say so in your terms.
+- [ ] Register the business (Gewerbeanmeldung) before taking money.
+
+## 7. Launch day
+
+- [ ] `SCHEDULER_ENABLED=true` and confirm in `/admin` that ingest + digest ran overnight.
+- [ ] Submit `https://yourdomain/sitemap.xml` in Google Search Console + Bing Webmaster.
+- [ ] Post the free weekly digest offer where the audience already is:
+      IT-Mittelstand LinkedIn groups, Bitkom/BVMW SME networks, freelance-Ausschreibung forums.
+- [ ] Mine your own database for outreach: award notices (`can-standard`) name companies
+      that already bid in your sectors — a legitimate, pre-qualified list.
+      `sqlite3 data/tenderping.db "SELECT DISTINCT buyer_name, buyer_country FROM notices WHERE notice_type LIKE 'can%' LIMIT 50;"`
+- [ ] Ask the first 10 free subscribers one question by email: *"did this week's digest
+      contain anything you'd actually bid on?"* Their answer tells you which CPV codes to
+      keep and which to drop. That is the whole product roadmap for month one.
+
+## 8. Ongoing (10 min/month)
+
+- [ ] `/admin?key=...` — job runs all green, MRR, pending confirmations.
+- [ ] ESP dashboard — bounces < 2%, complaints < 0.1%.
+- [ ] Backups exist in `data/backups/` (nightly, 14 kept). Copy them off the box
+      periodically: `scp -r root@vps:/var/lib/docker/volumes/..._tenderping-data/_data/backups .`
+- [ ] CI's `check-ted` step warns you if the TED API contract drifts.
+
+---
+
+## What breaks, and what happens when it does
+
+| Failure | Detection | Blast radius |
 |---|---|---|
-| No new notices | TED renamed a field | `npm run cli -- probe-fields` (ingest also self-heals on the next run) |
-| `doctor` fails on TED | Query returned 0 rows | Widen `TED_CPV_FAMILIES` or clear `TED_COUNTRIES` |
-| Emails in spam | DNS | Recheck SPF/DKIM/DMARC at your ESP |
-| Nobody upgrades | Match quality | Run `preview <email>` for real subscribers and tune default filters |
-| Digest not sending | Scheduler | `/admin` → run the job manually; check `SCHEDULER_ENABLED=true` |
-
-## Pricing notes
-
-€29/mo is deliberately at the bottom of the market (competitors: £29–£149/mo, enterprise
-£5,000+/yr). It is the easiest price to say yes to for a 5-person IT firm, and one won contract
-pays for a decade of subscription — that is the line to use in outreach.
-
-Raise revenue by *widening coverage*, not by chasing volume: a Team tier at €79 with more CPV
-families, more countries and Slack delivery is the natural second product, and the pipeline
-already supports all of it.
+| TED renames a search field | ingest logs a warning, client retries with the minimal field set | alerts lose optional detail, keep flowing |
+| TED changes query grammar | client walks its fallback chain to a date-only query and filters locally | precision drops, service continues |
+| TED is down | job fails, you get an alert email, next run retries | one missed digest, no data loss |
+| SMTP rejects a recipient | address is auto-suppressed | that one subscriber; reputation protected |
+| Stripe webhook missed | status stays stale until Stripe retries (it retries for 3 days) | self-healing |
+| VPS dies | restore the newest file from `data/backups/` onto a new box | minutes of downtime |

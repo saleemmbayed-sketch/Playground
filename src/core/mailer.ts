@@ -3,12 +3,21 @@ import path from 'node:path';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { config } from '../config.js';
 import { logEvent } from './db.js';
+import { isSuppressed } from './subscribers.js';
 
 let transporter: Transporter | null = null;
 let sentThisRun = 0;
 
 export function resetSendCounter(): void {
   sentThisRun = 0;
+}
+
+/**
+ * Drops the cached transporter so the next send rebuilds it from current config.
+ * Used after a transport/config change and by the resilience tests.
+ */
+export function resetTransport(): void {
+  transporter = null;
 }
 
 function getTransport(): Transporter {
@@ -33,9 +42,20 @@ export interface MailInput {
   unsubscribeUrl?: string;
 }
 
-export async function sendMail(msg: MailInput): Promise<{ ok: boolean; skipped?: string; file?: string }> {
+export type SendOutcome =
+  | { ok: true; file?: string }
+  /** kind lets callers tell a provider outage ('error') from an expected skip. */
+  | { ok: false; kind: 'suppressed' | 'capped' | 'error'; skipped: string };
+
+export async function sendMail(msg: MailInput): Promise<SendOutcome> {
+  // Never mail a hard-bounced or complained address again: deliverability depends on it.
+  if (isSuppressed(msg.to)) {
+    logEvent('mail.suppressed', { to: msg.to, subject: msg.subject });
+    return { ok: false, kind: 'suppressed', skipped: 'address suppressed' };
+  }
   if (sentThisRun >= config.mail.maxPerRun) {
-    return { ok: false, skipped: 'per-run send cap reached' };
+    logEvent('mail.capped', { to: msg.to });
+    return { ok: false, kind: 'capped', skipped: 'per-run send cap reached' };
   }
   sentThisRun += 1;
 
@@ -55,7 +75,19 @@ export async function sendMail(msg: MailInput): Promise<{ ok: boolean; skipped?:
     headers,
   };
 
-  const info: any = await getTransport().sendMail(envelope);
+  let info: any;
+  try {
+    info = await getTransport().sendMail(envelope);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    logEvent('mail.error', { to: msg.to, subject: msg.subject, detail });
+    // A 5xx SMTP rejection for this recipient is a permanent failure: suppress it.
+    if (/\b5\.\d\.\d\b|550|551|553|554/.test(detail)) {
+      const { suppress } = await import('./subscribers.js');
+      suppress(msg.to, 'hard-bounce', detail.slice(0, 300));
+    }
+    return { ok: false, kind: 'error', skipped: detail };
+  }
 
   if (config.mail.transport === 'outbox') {
     const dir = path.resolve(process.cwd(), 'data/outbox');

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS notices (
   cpv               TEXT,                       -- comma separated CPV codes
   cpv_main          TEXT,
   notice_type       TEXT,
+  contract_nature   TEXT,
   publication_date  TEXT,                       -- ISO date
   deadline_date     TEXT,                       -- ISO date, may be null
   value_amount      REAL,
@@ -92,6 +93,22 @@ CREATE TABLE IF NOT EXISTS job_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_job_runs ON job_runs(job, started_at DESC);
 
+-- Addresses we must never mail again (hard bounces, spam complaints, manual blocks).
+CREATE TABLE IF NOT EXISTS suppressions (
+  email      TEXT PRIMARY KEY,
+  reason     TEXT NOT NULL,
+  detail     TEXT,
+  created_at TEXT NOT NULL
+);
+
+-- Stripe delivers each event at least once and retries for days; this table makes
+-- webhook processing idempotent (the PRIMARY KEY is the claim).
+CREATE TABLE IF NOT EXISTS stripe_events (
+  id          TEXT PRIMARY KEY,
+  type        TEXT NOT NULL,
+  received_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS kv (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL,
@@ -100,19 +117,30 @@ CREATE TABLE IF NOT EXISTS kv (
 `;
 
 /**
- * Additive migrations. SQLite has no "ADD COLUMN IF NOT EXISTS", so we introspect first.
- * Keeps existing production databases upgradable on deploy with zero manual steps.
+ * Additive migrations for databases created by an older version.
+ * `CREATE TABLE IF NOT EXISTS` never adds columns, so new columns are applied here.
+ * Every entry must be idempotent and safe to run on a live database.
  */
 const MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
-  { table: 'notices', column: 'source', ddl: "ALTER TABLE notices ADD COLUMN source TEXT NOT NULL DEFAULT 'ted'" },
-  { table: 'subscribers', column: 'confirm_sent_at', ddl: 'ALTER TABLE subscribers ADD COLUMN confirm_sent_at TEXT' },
-  { table: 'subscribers', column: 'signup_source', ddl: 'ALTER TABLE subscribers ADD COLUMN signup_source TEXT' },
+  { table: 'notices', column: 'contract_nature', ddl: 'ALTER TABLE notices ADD COLUMN contract_nature TEXT' },
+  { table: 'notices', column: 'summary', ddl: 'ALTER TABLE notices ADD COLUMN summary TEXT' },
+  { table: 'notices', column: 'summary_source', ddl: 'ALTER TABLE notices ADD COLUMN summary_source TEXT' },
+  { table: 'subscribers', column: 'confirmed_at', ddl: 'ALTER TABLE subscribers ADD COLUMN confirmed_at TEXT' },
+  { table: 'subscribers', column: 'source', ddl: "ALTER TABLE subscribers ADD COLUMN source TEXT DEFAULT 'web'" },
 ];
 
 function migrate(d: DatabaseSync): void {
   for (const m of MIGRATIONS) {
     const cols = d.prepare(`PRAGMA table_info(${m.table})`).all() as unknown as Array<{ name: string }>;
-    if (cols.length && !cols.some((c) => c.name === m.column)) d.exec(m.ddl);
+    if (!cols.length) continue; // table not created yet in this schema version
+    if (cols.some((c) => c.name === m.column)) continue;
+    try {
+      d.exec(m.ddl);
+      console.log(`[db] migrated: ${m.table}.${m.column}`);
+    } catch (err) {
+      console.error(`[db] migration failed for ${m.table}.${m.column}`, err);
+      throw err;
+    }
   }
 }
 
@@ -124,16 +152,6 @@ export function db(): DatabaseSync {
   migrate(d);
   _db = d;
   return d;
-}
-
-/** Test helper: drop the cached handle so a new DB_FILE takes effect. */
-export function closeDb(): void {
-  try {
-    _db?.close();
-  } catch {
-    /* already closed */
-  }
-  _db = null;
 }
 
 export function nowIso(): string {
@@ -185,5 +203,24 @@ export async function withJobRun<T>(
       .run(nowIso(), message, id);
     console.error(`[job:${job}] failed`, err);
     return { ok: false, error: message };
+  }
+}
+
+/**
+ * Flushes the WAL into the main database file and closes the handle.
+ * Called on SIGTERM so a `docker compose restart` or a redeploy can never leave a
+ * half-written WAL behind, and so the nightly backup always has a clean file to copy.
+ */
+export function closeDb(): void {
+  if (!_db) return;
+  try {
+    _db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch {
+    /* checkpoint is best-effort; closing still flushes */
+  }
+  try {
+    _db.close();
+  } finally {
+    _db = null;
   }
 }

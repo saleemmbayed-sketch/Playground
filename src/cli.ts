@@ -12,17 +12,17 @@
  */
 import { config } from './config.js';
 import { db } from './core/db.js';
-import { runDailyDigest, runIngest, runWeeklyDigest } from './jobs/index.js';
-import { fetchNotices, buildQuery, probeFields } from './ingest/ted.js';
-import { patchEnvFile, runDoctor, setupStripe } from './core/provision.js';
-import { sendConfirmationEmail, sendWelcomeEmail } from './core/emails.js';
+import { runBackup, runDailyDigest, runIngest, runPrune, runWeeklyDigest } from './jobs/index.js';
+import { fetchNotices, queryStrategies } from './ingest/ted.js';
 import { recentNotices, upsertNotices, noticeStats } from './core/notices.js';
 import { enrichPending } from './core/summarize.js';
 import { matchNotices } from './core/match.js';
 import {
   confirmSubscriber, createSubscriber, getProfile, getSubscriberByEmail, setSubscriberStatus,
-  subscriberStats, updateProfile,
+  subscriberStats, suppress, updateProfile,
 } from './core/subscribers.js';
+import { verifyMailConfig } from './core/mailer.js';
+import { stripeEnabled } from './core/billing.js';
 
 const argv = process.argv.slice(2);
 const cmd = argv[0] ?? 'help';
@@ -68,9 +68,9 @@ async function main(): Promise<void> {
         cadence: has('pro') ? 'daily' : 'weekly',
         min_score: Number.parseFloat(flag('min-score') ?? '0.35'),
       });
-      confirmSubscriber(sub.id); // CLI-added subscribers are trusted, skip double opt-in
       if (has('pro')) setSubscriberStatus(sub.id, { status: 'active', plan: 'pro' });
-      print('subscriber', { ...getSubscriberByEmail(email)!, profile: getProfile(sub.id) });
+      if (has('pro') || has('confirm')) confirmSubscriber(sub.id);
+      print('subscriber', { ...sub, profile: getProfile(sub.id) });
       break;
     }
     case 'preview': {
@@ -95,10 +95,54 @@ async function main(): Promise<void> {
         jobs: db().prepare('SELECT job, started_at, ok, stats FROM job_runs ORDER BY id DESC LIMIT 5').all(),
       });
       break;
+    case 'confirm': {
+      const email = argv[1];
+      const sub = email ? getSubscriberByEmail(email) : null;
+      if (!sub) throw new Error('usage: confirm <email> (subscriber must exist)');
+      confirmSubscriber(sub.id);
+      print('confirmed', { id: sub.id, email: sub.email });
+      break;
+    }
+    case 'suppress': {
+      const email = argv[1];
+      if (!email) throw new Error('usage: suppress <email> [--reason manual]');
+      suppress(email, flag('reason') ?? 'manual');
+      print('suppressed', { email });
+      break;
+    }
+    case 'backup':
+      print('backup', await runBackup(Number.parseInt(flag('keep') ?? '14', 10)));
+      break;
+    case 'prune':
+      print('prune', await runPrune(Number.parseInt(flag('retain-days') ?? '400', 10)));
+      break;
+    case 'doctor': {
+      // Pre-launch readiness check: fails loudly on anything that would break in production.
+      const problems: string[] = [];
+      const warn: string[] = [];
+      if (config.security.secret === 'dev-insecure-secret-change-me') problems.push('APP_SECRET is still the insecure default');
+      if (!config.baseUrl.startsWith('https://') && config.env === 'production') problems.push('BASE_URL must be https in production');
+      if (config.mail.transport === 'outbox') warn.push('MAIL_TRANSPORT=outbox — no real email will be sent');
+      const mail = await verifyMailConfig();
+      if (!mail.ok) problems.push(`SMTP not usable: ${mail.detail}`);
+      if (!stripeEnabled()) warn.push('Stripe not configured — nobody can pay yet');
+      if (!config.stripe.webhookSecret && stripeEnabled()) problems.push('STRIPE_WEBHOOK_SECRET missing — subscription status will never update');
+      if (config.ted.offline) warn.push('TED_OFFLINE=true — running on fixtures, not live data');
+      if (config.brand.legalAddress.includes('Set LEGAL_ADDRESS')) problems.push('LEGAL_ADDRESS not set (required for a German Impressum)');
+      if (noticeStats().total === 0) warn.push('no notices indexed yet — run: cli ingest --days 14');
+      console.log('\nREADINESS CHECK');
+      console.log(`  mail: ${mail.detail}`);
+      for (const w of warn) console.log(`  WARN  ${w}`);
+      for (const p2 of problems) console.log(`  FAIL  ${p2}`);
+      console.log(problems.length ? `\n${problems.length} blocking issue(s).` : '\nNo blocking issues. Ready to launch.');
+      process.exitCode = problems.length ? 1 : 0;
+      break;
+    }
     case 'check-ted': {
-      console.log('query:', buildQuery(config.ted.lookbackDays));
+      console.log('query strategies (tried in order):');
+      for (const st of queryStrategies()) console.log(`  [${st.name}] ${st.build(config.ted.lookbackDays)}`);
       const res = await fetchNotices({ lookbackDays: Number.parseInt(flag('days') ?? '2', 10) });
-      console.log(`source=${res.source} pages=${res.pages} fetched=${res.notices.length} totalReported=${res.totalReported}`);
+      console.log(`\nsource=${res.source} strategy=${res.strategy} fields=${res.fieldSet} pages=${res.pages} fetched=${res.notices.length} discarded=${res.discarded} totalReported=${res.totalReported}`);
       for (const n of res.notices.slice(0, 5)) {
         console.log(`  [${n.id}] ${n.title.slice(0, 70)} | ${n.buyerCountry} | cpv=${n.cpv.slice(0, 3).join(',')} | deadline=${n.deadlineDate}`);
       }
@@ -108,83 +152,23 @@ async function main(): Promise<void> {
       }
       break;
     }
-    case 'doctor': {
-      console.log('\nRunning preflight checks...\n');
-      const results = await runDoctor();
-      let fatals = 0;
-      for (const r of results) {
-        const icon = r.ok ? '\x1b[32m✓\x1b[0m' : r.fatal ? '\x1b[31m✗\x1b[0m' : '\x1b[33m!\x1b[0m';
-        if (!r.ok && r.fatal) fatals += 1;
-        console.log(`  ${icon} ${r.name.padEnd(18)} ${r.detail}`);
-      }
-      const warnings = results.filter((r) => !r.ok && !r.fatal).length;
-      console.log(
-        `\n${fatals ? `\x1b[31m${fatals} blocking issue(s)\x1b[0m` : '\x1b[32mNo blocking issues\x1b[0m'}` +
-          `${warnings ? `, ${warnings} warning(s)` : ''}.\n`,
-      );
-      if (fatals) process.exitCode = 1;
-      break;
-    }
-    case 'setup-stripe': {
-      const amount = Number.parseInt(flag('amount') ?? '2900', 10);
-      const currency = flag('currency') ?? 'eur';
-      console.log(`Provisioning Stripe for ${config.baseUrl} ...`);
-      const res = await setupStripe({ amountCents: amount, currency });
-      console.log(`
-  product         ${res.productId}${res.reused.includes('product') ? ' (existing)' : ' (created)'}
-  price           ${res.priceId}${res.reused.includes('price') ? ' (existing)' : ' (created)'}
-  webhook         ${res.webhookId}${res.reused.includes('webhook') ? ' (existing)' : ' (created)'}
-  customer portal ${res.portalConfigured ? 'configured' : 'enable it once at dashboard.stripe.com/settings/billing/portal'}
-`);
-      const updates: Record<string, string> = { STRIPE_PRICE_ID: res.priceId };
-      if (res.webhookSecret) updates.STRIPE_WEBHOOK_SECRET = res.webhookSecret;
-      const patched = patchEnvFile(updates);
-      if (patched) {
-        console.log('  .env updated with STRIPE_PRICE_ID' + (res.webhookSecret ? ' and STRIPE_WEBHOOK_SECRET' : ''));
-      } else {
-        console.log('  Add these to your .env:');
-        for (const [k, v] of Object.entries(updates)) console.log(`    ${k}=${v}`);
-      }
-      if (!res.webhookSecret && res.reused.includes('webhook')) {
-        console.log('  Webhook already existed; copy its signing secret from the Stripe dashboard if not set.');
-      }
-      console.log('\n  Restart the app so the new values load.\n');
-      break;
-    }
-    case 'probe-fields': {
-      console.log('Probing which fields the live TED API accepts...');
-      const res = await probeFields({ verbose: true });
-      console.log(`\nworking (${res.working.length}): ${res.working.join(', ')}`);
-      if (res.rejected.length) console.log(`rejected (${res.rejected.length}): ${res.rejected.join(', ')}`);
-      console.log('Cached — ingest will use this set from now on.');
-      break;
-    }
-    case 'test-email': {
-      const email = argv[1];
-      if (!email) throw new Error('usage: test-email <address>');
-      const sub = createSubscriber(email, {}, { signupSource: 'cli-test' });
-      await sendConfirmationEmail(sub.id, sub.email);
-      await sendWelcomeEmail(sub.id, sub.email, { pro: false });
-      console.log(
-        config.mail.transport === 'outbox'
-          ? 'Wrote confirmation + welcome emails to data/outbox/ (MAIL_TRANSPORT=outbox).'
-          : `Sent confirmation + welcome emails to ${email}. Check inbox AND spam folder.`,
-      );
-      break;
-    }
     default:
-      console.log(`Commands:
-  setup-stripe [--amount 2900] [--currency eur]   create product, price, webhook, portal
-  doctor                                          preflight-check every dependency
-  check-ted [--days N]                            live API smoke test
-  probe-fields                                    discover which TED fields work
-  ingest [--days N]                               pull notices into the DB
-  digest-daily [--dry] / digest-weekly [--dry]    send digests
-  seed                                            load offline fixtures
-  add-subscriber <email> [--cpv 72,48] [--pro]    create a subscriber
-  preview <email>                                 score matches without sending
-  test-email <address>                            send yourself the lifecycle emails
-  stats                                           counts and recent job runs`);
+      console.log(
+        'Commands:\n' +
+        '  ingest [--days N]           pull notices from TED\n' +
+        '  digest-daily [--dry]        send the paid daily digest\n' +
+        '  digest-weekly [--dry]       send the free weekly digest\n' +
+        '  seed                        load offline fixtures\n' +
+        '  add-subscriber <email> [--cpv 72,48] [--countries DEU] [--keywords a,b] [--pro] [--confirm]\n' +
+        '  confirm <email>             mark opt-in confirmed\n' +
+        '  suppress <email>            never mail this address again\n' +
+        '  preview <email>             score the current pool for one subscriber\n' +
+        '  backup [--keep 14]          consistent SQLite snapshot\n' +
+        '  prune [--retain-days 400]   drop stale notices/events\n' +
+        '  stats                       counts + last job runs\n' +
+        '  check-ted [--days N]        live API contract smoke test\n' +
+        '  doctor                      pre-launch readiness check',
+      );
   }
 }
 

@@ -64,17 +64,12 @@ export function layout(opts: {
 ${opts.canonical ? `<link rel="canonical" href="${h(opts.canonical)}">` : ''}
 <meta property="og:title" content="${h(opts.title)}"><meta property="og:description" content="${h(desc)}">
 <meta property="og:type" content="website"><meta name="robots" content="index,follow">
-<meta property="og:site_name" content="${h(config.brand.name)}">
-<meta property="og:image" content="${h(`${config.baseUrl}/static/og-image.png`)}">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/png" href="/static/logo.png">
-<link rel="apple-touch-icon" href="/static/logo.png">
 <link rel="alternate" type="application/rss+xml" title="${h(config.brand.name)} tenders" href="/feed.xml">
 <style>${CSS}</style>
 ${opts.jsonLd ? `<script type="application/ld+json">${JSON.stringify(opts.jsonLd)}</script>` : ''}
 </head><body>
 <header class="top"><div class="wrap">
-  <a class="brand" href="/"><img src="/static/logo.png" alt="" width="22" height="22" style="vertical-align:-4px;margin-right:7px">${h(config.brand.name)}</a>
+  <a class="brand" href="/">${h(config.brand.name)}</a>
   <nav>
     <a href="/tenders">Live tenders</a>
     <a href="/pricing">Pricing</a>

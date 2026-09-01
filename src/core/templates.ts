@@ -107,3 +107,57 @@ export function digestText(o: DigestOptions): string {
     'Source: Tenders Electronic Daily (TED), © European Union. Not affiliated with the EU.');
   return lines.join('\n');
 }
+
+// ------------------------------------------------------- transactional emails
+
+/**
+ * Double opt-in confirmation. Required in Germany (UWG §7 / GDPR Art. 6) before any
+ * marketing email may be sent to an address the user typed into a form.
+ */
+export function confirmEmail(confirmUrl: string): { subject: string; html: string; text: string } {
+  const subject = `Confirm your ${config.brand.name} alerts`;
+  const html = `<!doctype html><html><body style="margin:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    <div style="max-width:560px;margin:0 auto;padding:28px 20px;background:#fff">
+      <div style="font-size:18px;font-weight:700">${escapeHtml(config.brand.name)}</div>
+      <p style="font-size:15px;color:#374151;line-height:1.6">One click and your tender alerts start.
+      We only send email when a new public tender matches your filters — never otherwise.</p>
+      <p><a href="${escapeHtml(confirmUrl)}"
+        style="background:#1d4ed8;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+        Confirm my subscription</a></p>
+      <p style="font-size:13px;color:#6b7280">If you didn't request this, ignore this email — nothing will be sent.</p>
+      <p style="font-size:12px;color:#9ca3af;word-break:break-all">${escapeHtml(confirmUrl)}</p>
+      <p style="font-size:12px;color:#9ca3af">${escapeHtml(config.brand.legalName)} · ${escapeHtml(config.brand.legalAddress)}</p>
+    </div></body></html>`;
+  const text = [
+    `${config.brand.name} — confirm your subscription`, '',
+    'Click to confirm and start receiving tender alerts:', confirmUrl, '',
+    "If you didn't request this, ignore this email — nothing will be sent.", '',
+    `${config.brand.legalName} · ${config.brand.legalAddress}`,
+  ].join('\n');
+  return { subject, html, text };
+}
+
+/** Re-sends the private settings link (the product has no passwords). */
+export function accountLinkEmail(accountUrl: string): { subject: string; html: string; text: string } {
+  const subject = `Your ${config.brand.name} settings link`;
+  const html = `<!doctype html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    <div style="max-width:560px;margin:0 auto;padding:28px 20px">
+      <div style="font-size:18px;font-weight:700">${escapeHtml(config.brand.name)}</div>
+      <p style="font-size:15px;color:#374151">Here is your private link to change filters or cancel:</p>
+      <p><a href="${escapeHtml(accountUrl)}" style="background:#1d4ed8;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Open my settings</a></p>
+      <p style="font-size:12px;color:#9ca3af;word-break:break-all">${escapeHtml(accountUrl)}</p>
+    </div></body></html>`;
+  const text = `${config.brand.name}\n\nYour private settings link:\n${accountUrl}\n`;
+  return { subject, html, text };
+}
+
+/** Operator alert when a scheduled job fails — the machine tells you it needs attention. */
+export function alertEmail(job: string, error: string): { subject: string; html: string; text: string } {
+  const subject = `[${config.brand.name}] job "${job}" failed`;
+  const body = `Job: ${job}\nWhen: ${new Date().toISOString()}\nHost: ${config.baseUrl}\n\n${error.slice(0, 3000)}`;
+  return {
+    subject,
+    text: body,
+    html: `<pre style="font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap">${escapeHtml(body)}</pre>`,
+  };
+}
