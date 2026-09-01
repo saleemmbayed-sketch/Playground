@@ -40,6 +40,10 @@ export interface Notice {
   description: string | null;
   urlHtml: string;
   language: string | null;
+  /** Award-notice intelligence: who won, and the buyer's stable registry id. */
+  winnerNames: string[];
+  buyerIdentifier: string | null;
+  isAward: boolean;
   raw: RawNotice;
 }
 
@@ -63,6 +67,10 @@ export const TED_FIELDS = [
   'description-proc',
   'notice-language',
   'links',
+  // Award-notice intelligence. Present on can-* notices; harmless on others.
+  'winner-name',
+  'winner-identifier',
+  'buyer-identifier',
 ] as const;
 
 /** Fallback field set if TED rejects any optional field above. */
@@ -104,6 +112,19 @@ function collectStrings(value: unknown): string[] {
     }
   }
   return [];
+}
+
+/** TED joins per-lot values with ';'. Splits, trims and de-duplicates them. */
+export function splitMulti(value: unknown, maxItems = 25): string[] {
+  const text = pickText(value, 4000);
+  if (!text) return [];
+  const seen = new Set<string>();
+  for (const part of text.split(';')) {
+    const clean = part.trim().replace(/\s+/g, ' ');
+    if (clean && clean.length <= 200) seen.add(clean);
+    if (seen.size >= maxItems) break;
+  }
+  return [...seen];
 }
 
 function collectCodes(value: unknown): string[] {
@@ -231,6 +252,12 @@ export function normalizeNotice(raw: RawNotice): Notice | null {
   const description =
     pickText(raw['description-lot'] ?? raw['description-proc'] ?? raw['notice-description'], 4000);
 
+  const noticeType = pickText(raw['notice-type'], 80);
+  // TED joins multi-lot winners with ';' — split so each supplier is queryable.
+  const winnerNames = splitMulti(raw['winner-name']);
+  // can-* = contract award notice: the only notice type that names a winner.
+  const isAward = Boolean(noticeType?.toLowerCase().startsWith('can')) || winnerNames.length > 0;
+
   return {
     id,
     title,
@@ -239,7 +266,10 @@ export function normalizeNotice(raw: RawNotice): Notice | null {
     placeNuts: nuts,
     cpv,
     cpvMain: cpv[0] ?? null,
-    noticeType: pickText(raw['notice-type'], 80),
+    noticeType,
+    winnerNames,
+    buyerIdentifier: pickText(raw['buyer-identifier'], 80),
+    isAward,
     contractNature: pickText(raw['contract-nature'], 40),
     publicationDate: firstDate(raw['publication-date']),
     deadlineDate: firstDate(
@@ -382,9 +412,31 @@ export interface FetchResult {
   discarded: number;
 }
 
+/** TED notice types that carry a named winner (contract award notices). */
+export const AWARD_NOTICE_TYPES = ['can-standard', 'can-social', 'can-desg', 'can-tran'] as const;
+
+/**
+ * Rewrites competition strategies into award-notice strategies: same CPV/country
+ * filters, but restricted to can-* notices. Awards are historical, so the caller
+ * must also widen the scope to ALL (ACTIVE only covers currently-open notices).
+ */
+export function awardStrategies(): QueryStrategy[] {
+  const clause = `notice-type IN (${AWARD_NOTICE_TYPES.join(' ')})`;
+  return queryStrategies().map((s) => ({
+    name: `award-${s.name}`,
+    build: (d: number) => {
+      const base = s.build(d);
+      const [head, ...sortTail] = base.split(' SORT BY ');
+      const sorted = sortTail.length ? ` SORT BY ${sortTail.join(' SORT BY ')}` : '';
+      return `${head} AND ${clause}${sorted}`;
+    },
+  }));
+}
+
 async function fetchWithStrategy(
   strategy: QueryStrategy,
   lookbackDays: number,
+  scope: 'ACTIVE' | 'ALL' = 'ACTIVE',
 ): Promise<Omit<FetchResult, 'source'>> {
   const query = strategy.build(lookbackDays);
   const collected: Notice[] = [];
@@ -403,7 +455,7 @@ async function fetchWithStrategy(
       fields: [...fields],
       page,
       limit,
-      scope: 'ACTIVE',
+      scope,
       paginationMode: 'PAGE_NUMBER',
       onlyLatestVersions: true,
     };
@@ -445,25 +497,27 @@ async function fetchWithStrategy(
   return { notices: collected, pages, totalReported, strategy: strategy.name, fieldSet, discarded };
 }
 
-export async function fetchNotices(opts: { lookbackDays?: number } = {}): Promise<FetchResult> {
-  const lookbackDays = opts.lookbackDays ?? config.ted.lookbackDays;
-
+async function runFetch(
+  strategies: QueryStrategy[],
+  lookbackDays: number,
+  scope: 'ACTIVE' | 'ALL',
+  keep: (n: Notice) => boolean,
+): Promise<FetchResult> {
   if (config.ted.offline) {
     const all = loadFixtures().map(normalizeNotice).filter((n): n is Notice => n !== null);
-    const notices = all.filter(matchesNiche);
+    const notices = all.filter((n) => matchesNiche(n) && keep(n));
     return {
       notices, pages: 1, totalReported: notices.length, source: 'fixtures',
       strategy: 'fixtures', fieldSet: 'full', discarded: all.length - notices.length,
     };
   }
 
-  const strategies = queryStrategies();
   const errors: string[] = [];
-
   for (const strategy of strategies) {
     try {
-      const res = await fetchWithStrategy(strategy, lookbackDays);
-      if (res.notices.length > 0) return { ...res, source: 'ted' };
+      const res = await fetchWithStrategy(strategy, lookbackDays, scope);
+      const notices = res.notices.filter(keep);
+      if (notices.length > 0) return { ...res, notices, source: 'ted' };
       errors.push(`${strategy.name}: 0 notices`);
       console.warn(`[ted] strategy "${strategy.name}" returned nothing, trying next`);
     } catch (err) {
@@ -472,6 +526,29 @@ export async function fetchNotices(opts: { lookbackDays?: number } = {}): Promis
       console.warn(`[ted] strategy "${strategy.name}" failed: ${msg}`);
     }
   }
-
   throw new Error(`All TED query strategies failed — ${errors.join(' | ')}`);
+}
+
+/** Open competitions — the daily alert feed. */
+export async function fetchNotices(opts: { lookbackDays?: number } = {}): Promise<FetchResult> {
+  return runFetch(
+    queryStrategies(),
+    opts.lookbackDays ?? config.ted.lookbackDays,
+    'ACTIVE',
+    () => true,
+  );
+}
+
+/**
+ * Historical contract award notices — the raw material for Re-tender Radar.
+ * Defaults to a 5-year lookback so that at least one full framework cycle
+ * (capped at 4 years by Art. 33(1) of Directive 2014/24/EU) is observable.
+ */
+export async function fetchAwards(opts: { lookbackDays?: number } = {}): Promise<FetchResult> {
+  return runFetch(
+    awardStrategies(),
+    opts.lookbackDays ?? config.ted.awardLookbackDays,
+    'ALL',
+    (n) => n.isAward,
+  );
 }

@@ -34,9 +34,13 @@ run('npx tsx src/cli.ts seed');
 run('npx tsx src/cli.ts add-subscriber demo@example.com --cpv 72,48 --countries DEU,AUT --keywords cloud,portal --pro');
 run('npx tsx src/cli.ts preview demo@example.com');
 run('npx tsx src/cli.ts digest-daily');
+// Re-tender Radar: build forecasts from the award notices in the fixtures.
+run('npx tsx src/cli.ts radar');
+run('npx tsx src/cli.ts radar-digest');
 run('npx tsx src/cli.ts doctor');
 
 const outbox = fs.existsSync('data/outbox') ? fs.readdirSync('data/outbox') : [];
 console.log(`\nGenerated ${outbox.length} email(s) in data/outbox/ — open one to see what a subscriber gets.`);
 console.log('Now run:  npm run dev     then open http://localhost:3000');
+console.log('Radar:    http://localhost:3000/radar   (the hero feature)');
 console.log('Admin:    http://localhost:3000/admin?key=dev-demo-secret-not-for-production\n');

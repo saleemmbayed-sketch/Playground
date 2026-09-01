@@ -25,6 +25,8 @@ const WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
 export interface StripeSetupResult {
   productId: string;
   priceId: string;
+  edgeProductId: string | null;
+  edgePriceId: string | null;
   webhookId: string;
   webhookSecret: string | null;
   portalConfigured: boolean;
@@ -34,6 +36,7 @@ export interface StripeSetupResult {
 /** Idempotent: re-running finds the existing product/price/webhook instead of duplicating. */
 export async function setupStripe(opts: {
   amountCents?: number;
+  edgeAmountCents?: number;
   currency?: string;
   productName?: string;
 } = {}): Promise<StripeSetupResult> {
@@ -42,39 +45,54 @@ export async function setupStripe(opts: {
   }
   const s = stripe();
   const amount = opts.amountCents ?? 2900;
+  const edgeAmount = opts.edgeAmountCents ?? 7900;
   const currency = (opts.currency ?? 'eur').toLowerCase();
   const productName = opts.productName ?? `${config.brand.name} Pro`;
   const reused: string[] = [];
 
-  // --- product ------------------------------------------------------------
-  const products = await s.products.list({ limit: 100, active: true });
-  let product = products.data.find((p) => p.name === productName);
-  if (product) {
-    reused.push('product');
-  } else {
-    product = await s.products.create({
-      name: productName,
-      description: 'Daily email alerts for EU public IT and software tenders, filtered to your sectors, regions and keywords.',
-      metadata: { app: 'tenderping' },
-    });
-  }
+  /** Finds an active product by name, or creates it. */
+  const ensureProduct = async (name: string, description: string): Promise<Stripe.Product> => {
+    const products = await s.products.list({ limit: 100, active: true });
+    const found = products.data.find((p) => p.name === name);
+    if (found) {
+      reused.push(`product:${name}`);
+      return found;
+    }
+    return s.products.create({ name, description, metadata: { app: 'tenderping' } });
+  };
 
-  // --- price --------------------------------------------------------------
-  const prices = await s.prices.list({ product: product.id, active: true, limit: 100 });
-  let price = prices.data.find(
-    (p) => p.unit_amount === amount && p.currency === currency && p.recurring?.interval === 'month',
-  );
-  if (price) {
-    reused.push('price');
-  } else {
-    price = await s.prices.create({
+  /** Finds a matching monthly price on a product, or creates it. */
+  const ensurePrice = async (product: Stripe.Product, cents: number): Promise<Stripe.Price> => {
+    const prices = await s.prices.list({ product: product.id, active: true, limit: 100 });
+    const found = prices.data.find(
+      (p) => p.unit_amount === cents && p.currency === currency && p.recurring?.interval === 'month',
+    );
+    if (found) {
+      reused.push(`price:${product.name}`);
+      return found;
+    }
+    return s.prices.create({
       product: product.id,
-      unit_amount: amount,
+      unit_amount: cents,
       currency,
       recurring: { interval: 'month' },
       metadata: { app: 'tenderping' },
     });
-  }
+  };
+
+  const product = await ensureProduct(
+    productName,
+    'Daily email alerts for EU public IT and software tenders, filtered to your sectors, regions and keywords.',
+  );
+  const price = await ensurePrice(product, amount);
+
+  // --- Edge tier: the Re-tender Radar upsell -------------------------------
+  const edgeProduct = await ensureProduct(
+    `${config.brand.name} Edge`,
+    'Everything in Pro, plus Re-tender Radar: forecasts of contracts before they are published, '
+      + 'with the named incumbent, last contract value and predicted publication window.',
+  );
+  const edgePrice = await ensurePrice(edgeProduct, edgeAmount);
 
   // --- webhook ------------------------------------------------------------
   const webhookUrl = `${config.baseUrl}/stripe/webhook`;
@@ -119,6 +137,8 @@ export async function setupStripe(opts: {
   return {
     productId: product.id,
     priceId: price.id,
+    edgeProductId: edgeProduct.id,
+    edgePriceId: edgePrice.id,
     webhookId: webhook.id,
     webhookSecret,
     portalConfigured,

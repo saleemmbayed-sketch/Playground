@@ -12,7 +12,10 @@
  */
 import { config } from './config.js';
 import { db } from './core/db.js';
-import { runBackup, runDailyDigest, runIngest, runPrune, runWeeklyDigest } from './jobs/index.js';
+import {
+  runAwardIngest, runBackup, runDailyDigest, runIngest, runPrune, runRadarDigest,
+  runRadarRefresh, runWeeklyDigest,
+} from './jobs/index.js';
 import { fetchNotices, queryStrategies } from './ingest/ted.js';
 import { recentNotices, upsertNotices, noticeStats } from './core/notices.js';
 import { enrichPending } from './core/summarize.js';
@@ -42,6 +45,17 @@ async function main(): Promise<void> {
       print('ingest', await runIngest(Number.isFinite(days) ? { lookbackDays: days } : {}));
       break;
     }
+    case 'ingest-awards': {
+      const days = Number.parseInt(flag('days') ?? '', 10);
+      print('ingest-awards', await runAwardIngest(Number.isFinite(days) ? { lookbackDays: days } : {}));
+      break;
+    }
+    case 'radar':
+      print('radar', await runRadarRefresh());
+      break;
+    case 'radar-digest':
+      print('radar-digest', await runRadarDigest({ dryRun: has('dry') }));
+      break;
     case 'digest-daily':
       print('digest-daily', await runDailyDigest({ dryRun: has('dry') }));
       break;
@@ -66,11 +80,13 @@ async function main(): Promise<void> {
         countries: flag('countries') ?? '',
         keywords: flag('keywords') ?? '',
         exclude_words: flag('exclude') ?? '',
-        cadence: has('pro') ? 'daily' : 'weekly',
+        cadence: has('pro') || has('edge') ? 'daily' : 'weekly',
         min_score: Number.parseFloat(flag('min-score') ?? '0.35'),
       });
-      if (has('pro')) setSubscriberStatus(sub.id, { status: 'active', plan: 'pro' });
-      if (has('pro') || has('confirm')) confirmSubscriber(sub.id);
+      if (has('pro') || has('edge')) {
+        setSubscriberStatus(sub.id, { status: 'active', plan: has('edge') ? 'edge' : 'pro' });
+      }
+      if (has('pro') || has('edge') || has('confirm')) confirmSubscriber(sub.id);
       print('subscriber', { ...sub, profile: getProfile(sub.id) });
       break;
     }
@@ -119,16 +135,20 @@ async function main(): Promise<void> {
       break;
     case 'setup-stripe': {
       const amount = Number.parseInt(flag('amount') ?? '2900', 10);
+      const edgeAmount = Number.parseInt(flag('edge-amount') ?? '7900', 10);
       const currency = flag('currency') ?? 'eur';
       console.log(`Provisioning Stripe for ${config.baseUrl} ...`);
-      const res = await setupStripe({ amountCents: amount, currency });
+      const res = await setupStripe({ amountCents: amount, edgeAmountCents: edgeAmount, currency });
       console.log(`
-  product         ${res.productId}${res.reused.includes('product') ? ' (existing)' : ' (created)'}
-  price           ${res.priceId}${res.reused.includes('price') ? ' (existing)' : ' (created)'}
+  product (Pro)   ${res.productId}
+  price   (Pro)   ${res.priceId}
+  product (Edge)  ${res.edgeProductId}
+  price   (Edge)  ${res.edgePriceId}
   webhook         ${res.webhookId}${res.reused.includes('webhook') ? ' (existing)' : ' (created)'}
   customer portal ${res.portalConfigured ? 'configured' : 'enable it once at dashboard.stripe.com/settings/billing/portal'}
 `);
       const updates: Record<string, string> = { STRIPE_PRICE_ID: res.priceId };
+      if (res.edgePriceId) updates.STRIPE_EDGE_PRICE_ID = res.edgePriceId;
       if (res.webhookSecret) updates.STRIPE_WEBHOOK_SECRET = res.webhookSecret;
       if (patchEnvFile(updates)) {
         console.log(`  .env updated with ${Object.keys(updates).join(' and ')}`);
@@ -185,7 +205,7 @@ async function main(): Promise<void> {
         '  digest-daily [--dry]        send the paid daily digest\n' +
         '  digest-weekly [--dry]       send the free weekly digest\n' +
         '  seed                        load offline fixtures\n' +
-        '  add-subscriber <email> [--cpv 72,48] [--countries DEU] [--keywords a,b] [--pro] [--confirm]\n' +
+        '  add-subscriber <email> [--cpv 72,48] [--countries DEU] [--keywords a,b] [--pro|--edge] [--confirm]\n' +
         '  confirm <email>             mark opt-in confirmed\n' +
         '  suppress <email>            never mail this address again\n' +
         '  preview <email>             score the current pool for one subscriber\n' +
@@ -193,8 +213,10 @@ async function main(): Promise<void> {
         '  prune [--retain-days 400]   drop stale notices/events\n' +
         '  stats                       counts + last job runs\n' +
         '  check-ted [--days N]        live API contract smoke test\n' +
-        '  setup-stripe [--amount 2900] [--currency eur]',
-        '                              create product, price, webhook and portal in Stripe',
+        '  setup-stripe [--amount 2900] [--edge-amount 7900] [--currency eur]',
+        '                              create both products, prices, webhook and portal in Stripe',
+        '  radar                       recompute Re-tender Radar forecasts from award notices',
+        '  ingest-awards               pull historical contract award notices (radar input)',
         '  doctor                      pre-launch readiness check',
       );
   }

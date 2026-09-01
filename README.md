@@ -5,6 +5,9 @@ IT/software sectors from the **official TED API**, matches each one against payi
 filters, emails them a plain-English brief, and bills them through Stripe. After setup it needs
 roughly **10 minutes of attention per month**.
 
+Its hero feature, **Re-tender Radar**, forecasts contracts *before they are published* — see
+[§1.1](#11-the-hero-feature-re-tender-radar).
+
 Everything in the stack is open source and free-tier. The only recurring costs are a domain and
 a small VPS (~€6/month all-in).
 
@@ -20,14 +23,65 @@ a small VPS (~€6/month all-in).
 | **Why it's defensible enough** | Not by data (it's public) but by *filtering quality + deduplication + inbox habit*. Churn on tender alerts is low: suppliers keep paying while they keep bidding. |
 | **Legal footing** | TED data is reusable under [Commission Decision 2011/833/EU](https://eur-lex.europa.eu/eli/dec/2011/833/oj). The Search API is explicitly offered to reusers and requires no key. Attribution is built into every page and email. |
 
-**Unit economics at €29/mo:** infra ~€6/mo total *regardless of subscriber count* (SQLite + one
+### 1.1 The hero feature: Re-tender Radar
+
+Everything above describes a good alerting product. Alerting is also a commodity — a dozen
+companies sell it, and a saved TED search is a free substitute. **Re-tender Radar is the part
+competitors cannot copy from the same public feed without building the same model.**
+
+**The claim:** *see tenders 6–12 months before they are published.*
+
+**Why that is possible, not marketing:**
+
+1. A **contract award notice** is a countdown timer. It is published when a contract is signed,
+   and it names the winner, the buyer and the value.
+2. EU **framework agreements may not run longer than four years** — Article 33(1) of
+   [Directive 2014/24/EU](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32014L0024):
+   *"the term of a framework agreement shall not exceed four years, save in exceptional cases duly
+   justified"*. The clock starts at the award.
+3. When it expires the buyer **must re-compete the work**, and the replacement competition is
+   normally published **6–12 months before expiry**.
+
+So for every buyer we measure how often they actually re-buy in each CPV family, project the next
+competition, and publish it as a forecast **with the reasoning shown**:
+
+```
+Comune di Milano — CPV 72 — confidence 90%
+  Expected back on the market 2027-01-15 → 2027-07-15
+  Incumbent: Computacenter AG & Co. oHG · Last value: 469,200 EUR · Cycle: 36 months (observed)
+  Why: re-tendered CPV 72 three times since 2019-01, on average every 36 months ·
+       last awarded 2025-01-15, so the contract is projected to expire around 2028-01-15 ·
+       replacement competitions are normally published 6-12 months before expiry ·
+       the buyer re-tenders on a highly regular cycle
+```
+
+**Why it makes money:**
+
+| Lever | Effect |
+|---|---|
+| **Premium tier** | Alerts sell for €29. Foresight sells for €79. Same infrastructure, same data pull. |
+| **Retention** | An alert is skimmed and deleted; a pipeline is checked every month. Radar changes the product from a notification into a planning tool. |
+| **Sales cycle** | By the time a tender is published, the budget is fixed and the scope is written — often with the incumbent's help. Radar puts the customer in the room *before* that, which is legal and expected. |
+| **SEO** | Every contracting authority gets a `/buyer/:slug` page with award history, a supplier league table and its forecast. That is a large body of genuinely unique pages, because nobody else publishes derived re-tender intelligence. |
+| **Proof of demand** | Tenders Direct already sells "advance re-tender alerts on frameworks and DPS" as a premium feature — the category is validated. |
+
+**Honesty guardrails.** Forecasts are labelled as statistical estimates, never announcements.
+Every card shows its confidence score and the reasons behind it, a single award falls back to the
+4-year legal ceiling with visibly lower confidence, and a forecast is retired automatically once a
+matching notice is actually published inside its predicted window.
+
+**Unit economics at €29/mo (Pro) and €79/mo (Edge):** infra ~€6/mo total *regardless of subscriber count* (SQLite + one
 container). Stripe takes ~1.5% + €0.25. Email is free up to 3,000/mo on Resend/Brevo free tiers.
 So subscriber #1 covers all infrastructure; every subsequent one is ~96% margin.
 
 ```
- 10 subscribers → €290/mo revenue → ~€277 net
- 30 subscribers → €870/mo revenue → ~€830 net   (still on free email tier)
-100 subscribers → €2,900/mo       → ~€2,750 net (add €20/mo email plan)
+ 10 Pro                → €290/mo   → ~€277 net
+ 30 Pro                → €870/mo   → ~€830 net    (still on free email tier)
+100 Pro                → €2,900/mo → ~€2,750 net  (add €20/mo email plan)
+
+With Radar as the upsell (a conservative 20% of subscribers take Edge):
+ 30 subs = 24 Pro + 6 Edge  → €696 + €474 = €1,170/mo  (+34% on the same traffic)
+100 subs = 80 Pro + 20 Edge → €2,320 + €1,580 = €3,900/mo (+34%)
 ```
 
 ---
@@ -44,18 +98,22 @@ src/
   core/db.ts             SQLite (node:sqlite — zero native deps), schema, job-run logging
   core/notices.ts        upsert + query layer
   core/match.ts          explainable relevance scoring (no LLM needed)
+  core/radar.ts          Re-tender Radar: the forecasting engine (pure, deterministic)
+  core/intel.ts          buyer profiles and supplier league tables from award notices
   core/subscribers.ts    subscribers, filter profiles, per-user delivery ledger
   core/summarize.ts      plain-language briefs; LLM optional with a hard daily budget cap
   core/mailer.ts         SMTP or safe "outbox" mode; per-run send cap
   core/templates.ts      HTML + text digest emails with RFC 8058 one-click unsubscribe
   core/billing.ts        Stripe checkout, billing portal, subscription lifecycle webhook
   core/tokens.ts         HMAC-signed settings/unsubscribe links (no passwords, no support load)
-  jobs/index.ts          ingest, daily paid digest, weekly free digest, built-in scheduler
+  jobs/index.ts          ingest, daily paid digest, weekly free digest, monthly award ingest
+                         + radar digest, built-in scheduler
   web/views.ts           server-rendered pages, no JS framework, no build step for the frontend
   web/ratelimit.ts       in-memory rate limiting for public forms
-test/                    57 tests: normaliser, money parsing, matcher, tokens, dedupe,
-                         opt-in gating, suppression, backups, every HTTP route, and
-                         signature-verified Stripe webhooks
+test/                    92 tests: normaliser, money parsing, matcher, tokens, dedupe,
+                         opt-in gating, suppression, backups, every HTTP route,
+                         signature-verified Stripe webhooks, and the full forecasting
+                         engine (cycle detection, confidence, paywall redaction)
 ```
 
 ### The three loops that make it run itself
@@ -65,8 +123,13 @@ test/                    57 tests: normaliser, money parsing, matcher, tokens, d
    week on its own and pulls long-tail search traffic ("*Rahmenvertrag Softwareentwicklung
    Ausschreibung*"). Visitors convert to the free weekly digest.
 2. **Conversion loop** — the free weekly digest shows the top 5 matches and states how many more
-   matched, with a trial CTA. No manual marketing.
-3. **Retention/billing loop** — Stripe handles trials, dunning, cancellation; the webhook mirrors
+   matched, with a trial CTA. Once a month the free Radar teaser shows *one* real forecast and
+   locks the rest — the strongest upgrade prompt in the product, because the locked rows are
+   information no competitor is selling. No manual marketing.
+3. **Foresight loop** — a monthly pass over TED award notices rebuilds the forecast table, which
+   feeds `/radar`, every `/buyer/:slug` page and the Edge email. Awards move slowly, so this is one
+   extra API pass per month for the feature that carries the premium tier.
+4. **Retention/billing loop** — Stripe handles trials, dunning, cancellation; the webhook mirrors
    status into the DB, and the digest audience is derived from that status. Nothing to reconcile.
 
 ### Compliance and deliverability (built in, not bolted on)
@@ -126,6 +189,9 @@ npm run cli -- setup-stripe  # creates product, price, webhook and portal; write
 npm run cli -- doctor        # pre-launch readiness check
 npm run cli -- preview you@example.com    # score today's pool for one subscriber
 npm run cli -- check-ted     # live TED API contract smoke test (needs internet)
+npm run cli -- ingest-awards # pull historical award notices (the Radar input)
+npm run cli -- radar         # rebuild forecasts from stored awards (no network)
+npm run cli -- radar-digest  # send the monthly Re-tender Radar email
 npm run cli                  # list every command
 ```
 
@@ -213,8 +279,13 @@ out, and what the blast radius is.
   (UK Contracts Finder, US SAM.gov, TenderNed, bund.de). Coverage breadth is exactly what the
   €49–€149/mo competitors charge for.
 - **Slack/Teams delivery** — a webhook URL per subscriber; the highest-value asked-for feature.
-- **Award-notice intelligence** — "who won, at what price" is a separate, more expensive product
-  sold to the same audience, from data you already store.
+- **Sharper forecasts** — the engine in `core/radar.ts` is deliberately simple and explainable
+  (median interval + the legal 4-year cap). Obvious upgrades from data already stored: read the
+  stated framework duration out of the notice text, model per-CPV renewal behaviour, and learn
+  from forecasts that were confirmed by an actual publication (`forecasts.superseded_by` is the
+  ground-truth label — the product measures its own hit rate for free).
+- **Sell the forecast to the other side** — incumbents will pay to know when *their* contract is
+  about to be re-competed. Same table, opposite persona.
 
 ---
 

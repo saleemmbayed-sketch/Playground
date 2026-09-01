@@ -41,7 +41,8 @@ const subjects = [
   ['Schulungsleistungen IT-Grundschutz', 'Training services for IT baseline protection', ['80533100', '72000000'], 145_000],
 ];
 
-const noticeTypes = ['cn-standard', 'cn-social', 'pin-only', 'can-standard'];
+// Competition notices only — award notices are generated separately below, with winners.
+const noticeTypes = ['cn-standard', 'cn-social', 'pin-only', 'cn-desg'];
 const iso = (d) => d.toISOString().slice(0, 10);
 const today = new Date();
 const shift = (days) => iso(new Date(today.getTime() + days * 86_400_000));
@@ -75,6 +76,74 @@ for (let i = 0; i < count; i += 1) {
   });
 }
 
+/* ---------------------------------------------------------------------------
+ * Historical contract award notices — the input to Re-tender Radar.
+ *
+ * Each buyer gets a run of awards on a fixed cycle, so the forecaster can
+ * measure a real interval and project the next competition. The most recent
+ * award is placed so that the predicted window lands near today: some already
+ * open, some still upcoming. That makes the offline demo show a live radar.
+ * ------------------------------------------------------------------------- */
+const suppliers = [
+  'Materna Information & Communications SE',
+  'msg systems ag',
+  'Capgemini Deutschland GmbH',
+  'Atos Information Technology GmbH',
+  'Accenture GmbH',
+  'Bechtle AG',
+  'T-Systems International GmbH',
+  'Adesso SE',
+  'PwC Strategy& Deutschland GmbH',
+  'Computacenter AG & Co. oHG',
+];
+
+const monthsAgo = (m) => {
+  const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - m, 15));
+  return d.toISOString().slice(0, 10);
+};
+
+let awardSeq = 0;
+buyers.forEach(([buyer, country, nuts], b) => {
+  const [deTitle, enTitle, cpv, baseValue] = subjects[b % subjects.length];
+  const cycle = [36, 48, 24][b % 3];              // observed re-tender interval
+  const offset = [10, 16, 22, 8][b % 4];         // months until projected expiry
+  const lastAwardMonthsAgo = cycle - offset;
+  const incumbent = suppliers[b % suppliers.length];
+
+  for (let k = 0; k < 3; k += 1) {
+    const when = lastAwardMonthsAgo + k * cycle;
+    if (when > 120) continue;                     // keep inside a 10-year history
+    // The incumbent usually retains the contract; occasionally someone displaces them.
+    const winner = k === 0 || b % 4 !== 0 ? incumbent : suppliers[(b + 3) % suppliers.length];
+    const value = Math.round(baseValue * (0.75 + ((b * 13 + k * 7) % 50) / 100));
+    awardSeq += 1;
+    notices.push({
+      'publication-number': `${900000 + awardSeq * 97}-${new Date(monthsAgo(when)).getFullYear()}`,
+      'notice-title': {
+        eng: [`Contract award: ${enTitle}`],
+        deu: [`Vergabebekanntmachung: ${deTitle}`],
+      },
+      'notice-type': 'can-standard',
+      'publication-date': `${monthsAgo(when)}Z`,
+      'buyer-name': { deu: [buyer], eng: [buyer] },
+      'buyer-country': [country],
+      'buyer-identifier': [`ORG-${1000 + b}`],
+      'place-of-performance': nuts,
+      'classification-cpv': cpv,
+      'total-value': [{ amount: value, currency: 'EUR' }],
+      'winner-name': { eng: [winner], deu: [winner] },
+      'winner-identifier': [`DE${300000000 + b * 7919}`],
+      'description-lot': {
+        eng: [
+          `${enTitle}. ${buyer} awarded this contract to ${winner} with a total value of `
+          + `${value.toLocaleString('en-GB')} EUR. The framework runs for ${cycle} months.`,
+        ],
+      },
+      'notice-language': ['deu'],
+    });
+  }
+});
+
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, JSON.stringify(notices, null, 2));
-console.log(`wrote ${notices.length} fixture notices to ${out}`);
+console.log(`wrote ${notices.length} fixture notices (${awardSeq} award notices) to ${out}`);

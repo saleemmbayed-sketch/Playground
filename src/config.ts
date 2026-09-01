@@ -35,6 +35,12 @@ export const config = {
     endpoint: process.env.TED_ENDPOINT ?? 'https://api.ted.europa.eu/v3/notices/search',
     /** Days of publication history to pull on each ingest run. */
     lookbackDays: int(process.env.TED_LOOKBACK_DAYS, 2),
+    /**
+     * Days of award history for Re-tender Radar. Default 5 years: frameworks are
+     * capped at 4 years by Art. 33(1) of Directive 2014/24/EU, so a 5-year window
+     * reliably contains at least one completed cycle per buyer.
+     */
+    awardLookbackDays: int(process.env.TED_AWARD_LOOKBACK_DAYS, 1825),
     /** Max notices per ingest run (safety valve against runaway pagination). */
     maxNotices: int(process.env.TED_MAX_NOTICES, 1500),
     pageSize: int(process.env.TED_PAGE_SIZE, 100),
@@ -78,12 +84,34 @@ export const config = {
     secretKey: process.env.STRIPE_SECRET_KEY ?? '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
     priceId: process.env.STRIPE_PRICE_ID ?? '',
+    /** Price for the Edge tier (Re-tender Radar + buyer intel). */
+    edgePriceId: process.env.STRIPE_EDGE_PRICE_ID ?? '',
     portalReturnPath: '/account',
   },
 
   billing: {
     priceLabel: process.env.PRICE_LABEL ?? '€29 / month',
+    edgePriceLabel: process.env.EDGE_PRICE_LABEL ?? '€79 / month',
     trialDays: int(process.env.TRIAL_DAYS, 14),
+  },
+
+  radar: {
+    /**
+     * Default assumed contract cycle when a buyer has only one observed award.
+     * 48 months = the legal ceiling for framework agreements (Art. 33(1),
+     * Directive 2014/24/EU); most public frameworks run the full term.
+     */
+     defaultCycleMonths: int(process.env.RADAR_DEFAULT_CYCLE_MONTHS, 48),
+    /**
+     * Re-let competitions are published 6-12 months before the incumbent
+     * contract expires, so the actionable window opens 12 months out.
+     */
+    windowOpensMonthsBefore: int(process.env.RADAR_WINDOW_OPEN_MONTHS, 12),
+    windowClosesMonthsBefore: int(process.env.RADAR_WINDOW_CLOSE_MONTHS, 6),
+    /** How far ahead the radar lists forecasts. */
+    horizonMonths: int(process.env.RADAR_HORIZON_MONTHS, 18),
+    /** Ignore awards below this value — noise, not pipeline. */
+    minValue: int(process.env.RADAR_MIN_VALUE, 25000),
   },
 
   security: {

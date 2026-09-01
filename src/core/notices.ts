@@ -31,13 +31,15 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
   const insert = d.prepare(`
     INSERT INTO notices (id, title, buyer_name, buyer_country, place_nuts, cpv, cpv_main,
       notice_type, contract_nature, publication_date, deadline_date, value_amount, value_currency,
-      description, url_html, language, raw, first_seen_at, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      description, url_html, language, raw, winner_names, buyer_identifier, is_award,
+      first_seen_at, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `);
   const update = d.prepare(`
     UPDATE notices SET title=?, buyer_name=?, buyer_country=?, place_nuts=?, cpv=?, cpv_main=?,
       notice_type=?, contract_nature=?, publication_date=?, deadline_date=?, value_amount=?,
-      value_currency=?, description=?, url_html=?, language=?, raw=?, updated_at=?
+      value_currency=?, description=?, url_html=?, language=?, raw=?, winner_names=?,
+      buyer_identifier=?, is_award=?, updated_at=?
     WHERE id=?
   `);
 
@@ -55,14 +57,16 @@ export function upsertNotices(notices: Notice[]): { inserted: number; updated: n
         update.run(
           n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType, n.contractNature,
           n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency, n.description,
-          n.urlHtml, n.language, raw, ts, n.id,
+          n.urlHtml, n.language, raw, n.winnerNames.join('; '), n.buyerIdentifier,
+          n.isAward ? 1 : 0, ts, n.id,
         );
         updated += 1;
       } else {
         insert.run(
           n.id, n.title, n.buyerName, n.buyerCountry, nuts, cpv, n.cpvMain, n.noticeType,
           n.contractNature, n.publicationDate, n.deadlineDate, n.valueAmount, n.valueCurrency,
-          n.description, n.urlHtml, n.language, raw, ts, ts,
+          n.description, n.urlHtml, n.language, raw, n.winnerNames.join('; '),
+          n.buyerIdentifier, n.isAward ? 1 : 0, ts, ts,
         );
         inserted += 1;
       }

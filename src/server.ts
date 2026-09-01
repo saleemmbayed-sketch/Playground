@@ -11,11 +11,17 @@ import {
   isValidEmail, subscriberStats, suppress, unsubscribe, updateProfile,
 } from './core/subscribers.js';
 import { accountUrl, signToken, verifyToken, unsubscribeUrl } from './core/tokens.js';
-import { createCheckoutSession, createPortalSession, handleWebhook, stripeEnabled } from './core/billing.js';
 import {
-  runBackup, runDailyDigest, runIngest, runPrune, runWeeklyDigest, startScheduler,
+  createCheckoutSession, createPortalSession, edgeEnabled, handleWebhook, hasRadarAccess,
+  stripeEnabled, type Tier,
+} from './core/billing.js';
+import { countForecasts, listForecasts } from './core/radar.js';
+import { buyerProfile, listBuyers } from './core/intel.js';
+import {
+  runAwardIngest, runBackup, runDailyDigest, runIngest, runPrune, runRadarDigest,
+  runRadarRefresh, runWeeklyDigest, startScheduler,
 } from './jobs/index.js';
-import { CPV_SECTORS, h, layout, money, tenderCard } from './web/views.js';
+import { CPV_SECTORS, forecastCard, h, layout, money, tenderCard } from './web/views.js';
 import { rateLimit, startRateLimitSweeper } from './web/ratelimit.js';
 import { sendMail } from './core/mailer.js';
 import { accountLinkEmail, confirmEmail } from './core/templates.js';
@@ -27,6 +33,9 @@ async function runNamedJob(job: string): Promise<unknown | null> {
     case 'digest-weekly': return runWeeklyDigest();
     case 'backup': return runBackup();
     case 'prune': return runPrune();
+    case 'ingest-awards': return runAwardIngest();
+    case 'radar': return runRadarRefresh();
+    case 'radar-digest': return runRadarDigest();
     default: return null;
   }
 }
@@ -100,12 +109,27 @@ export function buildServer() {
       <div class="card"><div class="stat">${stats.countries}</div><p>buyer countries covered</p></div>
     </div>
 
+    <section class="card" style="border-color:#1d4ed8;margin-top:32px">
+      <h2 style="margin-top:0">The tenders your competitors haven't seen yet</h2>
+      <p class="lede" style="margin-bottom:8px">Re-tender Radar forecasts contracts <strong>before they are
+      published</strong> — typically 6 to 12 months ahead.</p>
+      <p>An EU framework agreement cannot run longer than four years, and buyers publish the replacement
+      competition months before the old one expires. We read every contract award notice on TED, measure
+      how often each buyer actually re-buys, and tell you what is coming: <strong>which authority,
+      which sector, who the incumbent is, what they paid last time, and the month to expect the notice.</strong></p>
+      <p>By the time a tender is published the budget is fixed and the scope is written. Radar puts you in
+      the room before that happens.</p>
+      <p style="margin-top:14px"><a class="btn" href="/radar">See the radar →</a>
+        <a class="btn secondary" href="/buyers">Browse buyers</a></p>
+    </section>
+
     <h2>Why this beats a saved TED search</h2>
     <div class="grid">
       <div class="card"><h3>Explainable matching</h3><p>Every alert says why it matched: CPV, region, keyword, value band, days left to bid.</p></div>
       <div class="card"><h3>Never the same tender twice</h3><p>Deduplicated per subscriber, so your inbox stays a to-do list, not a firehose.</p></div>
       <div class="card"><h3>Plain-language briefs</h3><p>Each notice condensed to what is being bought, by whom, for how much, by when.</p></div>
       <div class="card"><h3>Silence when there is nothing</h3><p>No daily "0 results" email. We only write when there is something worth your time.</p></div>
+      <div class="card"><h3>Foresight, not just notification</h3><p>Radar shows the re-tender before it is published, with the incumbent to displace and the last contract value.</p></div>
     </div>
 
     <h2>Browse by sector</h2>
@@ -228,20 +252,37 @@ export function buildServer() {
   app.get('/pricing', async (req, reply) => {
     const canceled = (req.query as any).canceled ? '<div class="notice">Checkout canceled — no charge was made.</div>' : '';
     const body = `${canceled}
-      <h1 style="margin-top:32px">One plan. Every match, every morning.</h1>
+      <h1 style="margin-top:32px">Know about the tender before it exists.</h1>
+      <p class="lede">Most tools tell you a contract was published. Edge tells you it is coming —
+      with the incumbent's name, the last contract value and the month the notice is expected.</p>
       <div class="grid">
         <div class="card"><h3>Free</h3><div class="price">€0</div>
-          <p>Weekly digest, top 5 matches, full public archive.</p>
+          <p>Weekly digest, top 5 matches, full public archive, one Re-tender Radar teaser a month.</p>
           <p style="margin-top:14px"><a class="btn secondary" href="/">Get the weekly digest</a></p></div>
-        <div class="card" style="border-color:#1d4ed8">
+        <div class="card">
           <h3>Pro</h3><div class="price">${h(config.billing.priceLabel)}</div>
           <p>Daily alerts · unlimited matches · custom CPV, NUTS, keyword and value filters ·
              exclusion terms · match explanations · cancel anytime.</p>
           <form class="inline" method="post" action="/checkout" style="margin-top:14px">
             <input type="email" name="email" placeholder="you@company.com" required>
-            <button class="btn" type="submit">Start ${config.billing.trialDays}-day trial</button>
+            <input type="hidden" name="tier" value="pro">
+            <button class="btn secondary" type="submit">Start ${config.billing.trialDays}-day trial</button>
           </form>
           ${stripeEnabled() ? '' : '<p style="color:#991b1b;font-size:13px">Billing not configured yet (set STRIPE_* env vars).</p>'}
+        </div>
+        <div class="card" style="border-color:#1d4ed8">
+          <h3>Edge <span class="tag" style="background:#dcfce7;color:#166534">most valuable</span></h3>
+          <div class="price">${h(config.billing.edgePriceLabel)}</div>
+          <p><strong>Everything in Pro, plus Re-tender Radar:</strong> contracts forecast to return to
+             the market 6–12 months ahead, the incumbent you would displace, the last contract value,
+             buyer profiles and supplier league tables.</p>
+          <form class="inline" method="post" action="/checkout" style="margin-top:14px">
+            <input type="email" name="email" placeholder="you@company.com" required>
+            <input type="hidden" name="tier" value="edge">
+            <button class="btn" type="submit">Start ${config.billing.trialDays}-day trial</button>
+          </form>
+          ${edgeEnabled() ? '' : '<p style="color:#991b1b;font-size:13px">Edge price not provisioned yet (run npm run cli -- setup-stripe).</p>'}
+          <p style="margin-top:10px;font-size:13px"><a href="/radar">See the radar →</a></p>
         </div>
       </div>
       <h2>Questions</h2>
@@ -249,8 +290,162 @@ export function buildServer() {
         <tr><td>Where does the data come from?</td><td>The official EU TED Search API — the legal source of record for EU public procurement above threshold.</td></tr>
         <tr><td>Can I cancel?</td><td>One click in the Stripe billing portal, any time. No contract.</td></tr>
         <tr><td>Do you email me every day?</td><td>Only when something new matches. Empty days stay silent.</td></tr>
+        <tr><td>How can you know about a tender early?</td><td>Every contract award notice is a countdown timer.
+          EU framework agreements are capped at four years (Art. 33(1), Directive 2014/24/EU), and the replacement
+          competition is normally published 6–12 months before expiry. We measure each buyer's actual re-tender
+          cycle from their published awards and project the next one, with a confidence score and the reasoning shown.</td></tr>
+        <tr><td>Are the forecasts guaranteed?</td><td>No. They are statistical estimates from official published
+          data, not announcements — which is exactly why they arrive before the notice does.</td></tr>
       </table>`;
     return html(reply, layout({ title: `Pricing — ${config.brand.name}`, body, canonical: `${config.baseUrl}/pricing` }));
+  });
+
+  // ---------------------------------------------------------------- radar
+  //
+  // The hero feature. Public visitors see the shape of the pipeline and a couple
+  // of unlocked examples; the rest is blurred until they subscribe to Edge. The
+  // preview is deliberately generous — the forecast is only persuasive if you can
+  // see that it is real and that the reasoning holds up.
+  app.get('/radar', async (req, reply) => {
+    const q = req.query as Record<string, string>;
+    const cpv = (q.cpv ?? '').replace(/\D/g, '').slice(0, 2);
+    const token = q.t ?? '';
+    // Signed account link (as sent in the radar email) unlocks the full list.
+    const claims = token ? verifyToken<{ sub: number; scope: string }>(token) : null;
+    const sub = claims?.sub ? getSubscriber(claims.sub) : null;
+    const unlocked = hasRadarAccess(sub);
+
+    const forecasts = listForecasts({
+      cpvPrefixes: cpv ? [cpv] : undefined,
+      limit: unlocked ? 100 : 30,
+      minConfidence: 0.3,
+    });
+    const freePreview = 2;
+    const cards = forecasts
+      .map((f, i) => forecastCard(f, { locked: !unlocked && i >= freePreview }))
+      .join('');
+
+    const body = `
+      <h1 style="margin-top:32px">Re-tender Radar</h1>
+      <p class="lede">Contracts that are due back on the market — published months before the
+      tender notice exists. Every forecast names the incumbent, the last contract value and the
+      window in which the replacement competition is expected.</p>
+      <p style="font-size:14px;color:#475569">How it works: an EU framework agreement may not run
+      longer than four years (Art. 33(1), Directive 2014/24/EU), and buyers publish the replacement
+      competition 6–12 months before expiry. We read every contract award notice on TED, measure how
+      often each buyer actually re-buys in each sector, and project the next competition. The
+      reasoning behind every forecast is shown — no black box.</p>
+      <p>${CPV_SECTORS.map((sec) => `<a class="tag" href="/radar?cpv=${sec.code}">${h(sec.label)}</a>`).join(' ')}
+        ${cpv ? '<a class="tag" href="/radar">clear filter</a>' : ''}</p>
+      ${unlocked
+        ? '<div class="notice">Edge subscription active — all forecasts unlocked.</div>'
+        : `<div class="notice">Showing ${Math.min(freePreview, forecasts.length)} of
+           ${countForecasts()} live forecasts. <a href="/pricing">Unlock the rest with Edge →</a></div>`}
+      ${cards || '<p>No forecasts yet — run an award ingest to populate the radar.</p>'}
+      ${unlocked ? '' : `<div class="card" style="margin-top:24px;border-color:#1d4ed8">
+        <h3>Get the full radar</h3>
+        <p>Every predicted re-tender in your sectors, emailed monthly, plus buyer profiles and
+        supplier league tables. ${h(config.billing.edgePriceLabel)}, ${config.billing.trialDays}-day free trial.</p>
+        <form class="inline" method="post" action="/checkout">
+          <input type="email" name="email" placeholder="you@company.com" required>
+          <input type="hidden" name="tier" value="edge">
+          <button class="btn" type="submit">Start free trial</button>
+        </form></div>`}`;
+
+    return html(reply, layout({
+      title: `Re-tender Radar — EU contracts coming back to market — ${config.brand.name}`,
+      description:
+        'Forecasts of EU public contracts due to be re-tendered, with the incumbent supplier, last '
+        + 'contract value and expected publication window — months before the notice appears on TED.',
+      canonical: `${config.baseUrl}/radar`,
+      body,
+    }));
+  });
+
+  // ---------------------------------------------------------------- buyers
+  //
+  // One indexable page per contracting authority. This is the SEO engine: nobody
+  // else publishes "who wins at this buyer, and what is coming back to market".
+  app.get('/buyers', async (_req, reply) => {
+    const buyers = listBuyers({ limit: 300, minAwards: 1 });
+    const rows = buyers
+      .map((b) => `<tr><td><a href="/buyer/${encodeURIComponent(b.slug)}">${h(b.name)}</a></td>
+        <td>${h(b.country ?? '')}</td><td>${b.awards}</td>
+        <td>${h(money(b.totalValue || null, b.currency))}</td></tr>`)
+      .join('');
+    const body = `
+      <h1 style="margin-top:32px">Contracting authorities</h1>
+      <p class="lede">Award history, supplier league tables and re-tender forecasts for every
+      buyer we track.</p>
+      ${buyers.length
+        ? `<table class="kv"><tr><th>Buyer</th><th>Country</th><th>Awards</th><th>Value awarded</th></tr>${rows}</table>`
+        : '<p>No award notices indexed yet.</p>'}`;
+    return html(reply, layout({
+      title: `EU contracting authorities — ${config.brand.name}`,
+      description: 'Public procurement profiles for EU contracting authorities: award history, winning suppliers and re-tender forecasts.',
+      canonical: `${config.baseUrl}/buyers`,
+      body,
+    }));
+  });
+
+  app.get('/buyer/:slug', async (req, reply) => {
+    const { slug } = req.params as { slug: string };
+    const p = buyerProfile(slug);
+    if (!p) {
+      return html(reply.code(404), layout({ title: 'Buyer not found', body: '<h1>Unknown buyer</h1><p><a href="/buyers">All buyers →</a></p>' }));
+    }
+
+    const suppliers = p.suppliers.length
+      ? `<table class="kv"><tr><th>Supplier</th><th>Wins</th><th>Share</th></tr>${p.suppliers
+          .map((sp) => `<tr><td>${h(sp.name)}</td><td>${sp.wins}</td><td>${sp.sharePct}%</td></tr>`)
+          .join('')}</table>`
+      : '<p>No winning suppliers named in the awards we hold for this buyer.</p>';
+
+    const awards = p.recentAwards
+      .map((a) => `<tr><td>${h(a.date ?? '')}</td><td>${h(a.title.slice(0, 110))}</td>
+        <td>${h(a.winners.slice(0, 80) || '—')}</td><td>${h(money(a.value, a.currency))}</td></tr>`)
+      .join('');
+
+    // Forecasts are the paid asset, so the profile shows one and locks the rest.
+    const cards = p.forecasts.map((f, i) => forecastCard(f, { locked: i >= 1 })).join('');
+
+    const body = `
+      <h1 style="margin-top:32px">${h(p.name)}</h1>
+      <p class="lede">${h(p.country ?? 'EU')} · ${p.awards} award${p.awards === 1 ? '' : 's'} on record ·
+      ${h(money(p.totalValue || null, p.currency))} awarded ·
+      sectors ${p.families.map((f) => `CPV ${h(f)}`).join(', ') || 'n/a'}</p>
+
+      <h2>Coming back to market</h2>
+      ${cards || '<p>No re-tender forecast for this buyer yet.</p>'}
+      ${p.forecasts.length > 1
+        ? `<p><a class="btn" href="/pricing">Unlock all ${p.forecasts.length} forecasts for this buyer →</a></p>`
+        : ''}
+
+      <h2>Who wins here</h2>
+      ${suppliers}
+
+      <h2>Recent awards</h2>
+      ${awards
+        ? `<table class="kv"><tr><th>Date</th><th>Contract</th><th>Winner</th><th>Value</th></tr>${awards}</table>`
+        : '<p>No awards recorded.</p>'}
+
+      <h2>Track this buyer</h2>
+      <form class="inline" method="post" action="/subscribe">
+        <input type="email" name="email" placeholder="you@company.com" required>
+        <input type="hidden" name="cpv_prefixes" value="${h(p.families.join(',') || '72,48')}">
+        <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
+        <button class="btn" type="submit">Email me their new tenders</button>
+      </form>
+      <p style="margin-top:20px"><a href="/buyers">← All contracting authorities</a></p>`;
+
+    return html(reply, layout({
+      title: `${p.name} — procurement profile, suppliers and re-tender forecast`,
+      description:
+        `Public procurement profile for ${p.name}: ${p.awards} contract awards, the suppliers who win `
+        + 'there, and forecasts of which contracts are due back on the market.',
+      canonical: `${config.baseUrl}/buyer/${encodeURIComponent(p.slug)}`,
+      body,
+    }));
   });
 
   // ------------------------------------------------------------ subscribe
@@ -340,8 +535,15 @@ export function buildServer() {
         body: '<div class="notice error">Billing is not configured on this instance yet. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID.</div>',
       }));
     }
+    const tier: Tier = b.tier === 'edge' ? 'edge' : 'pro';
+    if (tier === 'edge' && !edgeEnabled()) {
+      return html(reply.code(503), layout({
+        title: 'Edge not available',
+        body: '<div class="notice error">The Edge tier is not provisioned on this instance yet. Set STRIPE_EDGE_PRICE_ID.</div>',
+      }));
+    }
     try {
-      const url = await createCheckoutSession(email);
+      const url = await createCheckoutSession(email, tier);
       return reply.redirect(url, 303);
     } catch (err) {
       req.log.error(err);
@@ -517,8 +719,11 @@ export function buildServer() {
 
   app.get('/sitemap.xml', async (_req, reply) => {
     const rows = listNotices({ limit: 5000 });
-    const urls = ['', '/tenders', '/pricing', '/legal']
+    const urls = ['', '/tenders', '/radar', '/buyers', '/pricing', '/legal']
       .concat(CPV_SECTORS.map((s2) => `/sectors/${s2.code}`))
+      .concat(CPV_SECTORS.map((s2) => `/radar?cpv=${s2.code}`))
+      // One indexable page per contracting authority — the long tail that ranks.
+      .concat(listBuyers({ limit: 2000 }).map((b) => `/buyer/${encodeURIComponent(b.slug)}`))
       .map((p) => `<url><loc>${config.baseUrl}${p}</loc></url>`)
       .concat(rows.map((n) => `<url><loc>${config.baseUrl}/tender/${encodeURIComponent(n.id)}</loc>${
         n.publication_date ? `<lastmod>${n.publication_date}</lastmod>` : ''}</url>`));

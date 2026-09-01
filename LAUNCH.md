@@ -62,11 +62,14 @@ Deliverability *is* the product. A digest in spam is worth nothing.
 ## 4. Billing (≈20 min)
 
 - [ ] Put your Stripe secret key in `.env`, then run **`npm run cli -- setup-stripe`**. It creates
-      the product, the €29/month recurring price, the webhook endpoint (with exactly the events
-      the app handles) and the Customer Portal, and writes `STRIPE_PRICE_ID` and
-      `STRIPE_WEBHOOK_SECRET` back into `.env`. Re-running it is safe. The three items below are
-      then already done — verify rather than redo them.
-- [ ] Stripe product created: recurring, €29/month. Copy the **price ID** → `STRIPE_PRICE_ID`.
+      **both** products (Pro €29/month and Edge €79/month), their recurring prices, the webhook
+      endpoint (with exactly the events the app handles) and the Customer Portal, and writes
+      `STRIPE_PRICE_ID`, `STRIPE_EDGE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` back into `.env`.
+      Re-running it is safe. The items below are then already done — verify rather than redo them.
+      Change the amounts with `--amount 2900 --edge-amount 7900`.
+- [ ] Stripe products created: Pro recurring €29/month → `STRIPE_PRICE_ID`, Edge recurring
+      €79/month → `STRIPE_EDGE_PRICE_ID`. Edge is the tier that includes Re-tender Radar; without
+      its price ID the `/pricing` page shows Edge as unavailable and only Pro can be bought.
 - [ ] **BLOCKER** Webhook endpoint added in Stripe → `https://yourdomain/stripe/webhook`,
       events: `checkout.session.completed`, `customer.subscription.created`,
       `customer.subscription.updated`, `customer.subscription.deleted`,
@@ -75,6 +78,9 @@ Deliverability *is* the product. A digest in spam is worth nothing.
 - [ ] Customer Portal enabled in Stripe settings (so cancellations never reach your inbox).
 - [ ] Run one real end-to-end test in Stripe **test mode**: subscribe → check the row in
       `/admin` flips to `trialing` → cancel in the portal → check it flips to `canceled`.
+- [ ] Test the **Edge** checkout too, and confirm the subscriber's `plan` reads `edge`
+      (the webhook derives the tier from the price on the subscription, so portal
+      upgrades/downgrades between Pro and Edge are honoured automatically).
 - [ ] Switch to live keys, then repeat the checkout once with a real card and refund yourself.
 
 ## 5. Data (≈15 min)
@@ -87,6 +93,12 @@ Deliverability *is* the product. A digest in spam is worth nothing.
 - [ ] `docker compose exec app node dist/cli.js stats` shows a few thousand notices.
 - [ ] Tune `TED_CPV_FAMILIES` / `TED_COUNTRIES` to the niche you actually want to sell to.
       Narrower = better match quality = lower churn.
+- [ ] **Build the Re-tender Radar** — this is what Edge subscribers are paying for, and it needs
+      history, so do it before launch, not after:
+      `docker compose exec app node dist/cli.js ingest-awards --days 1825`
+      then `... node dist/cli.js radar`. Five years of award notices gives every buyer at least one
+      completed framework cycle to measure. Check `/radar` shows forecasts and `/buyers` lists
+      authorities; both are then in your sitemap.
 
 ## 6. Legal (Germany) (≈30 min)
 
@@ -102,6 +114,10 @@ Deliverability *is* the product. A digest in spam is worth nothing.
 
 - [ ] `SCHEDULER_ENABLED=true` and confirm in `/admin` that ingest + digest ran overnight.
 - [ ] Submit `https://yourdomain/sitemap.xml` in Google Search Console + Bing Webmaster.
+- [ ] **Lead with the Radar, not the alerts.** Alerting is a commodity; "see the tender 6–12
+      months before it is published, with the incumbent's name and what they were paid" is not.
+      Use a real forecast from your own `/radar` page as the hook in every post — it is concrete,
+      checkable, and impossible for an alerts-only competitor to answer.
 - [ ] Post the free weekly digest offer where the audience already is:
       IT-Mittelstand LinkedIn groups, Bitkom/BVMW SME networks, freelance-Ausschreibung forums.
 - [ ] Mine your own database for outreach: award notices (`can-standard`) name companies

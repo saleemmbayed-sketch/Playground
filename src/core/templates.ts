@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import type { ScoredNotice } from './match.js';
+import type { Forecast } from './radar.js';
 
 export const escapeHtml = (s: string): string =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -160,4 +161,103 @@ export function alertEmail(job: string, error: string): { subject: string; html:
     text: body,
     html: `<pre style="font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap">${escapeHtml(body)}</pre>`,
   };
+}
+
+/* ----------------------------------------------------- Re-tender Radar --- */
+
+export interface RadarEmailOptions {
+  forecasts: Forecast[];
+  accountUrl: string;
+  unsubscribeUrl: string;
+  /** Free/Pro recipients get one teaser row and an upgrade prompt. */
+  teaser?: boolean;
+  lockedCount?: number;
+}
+
+const fmtWindow = (f: Forecast): string =>
+  `${f.windowOpen.slice(0, 7)} → ${f.windowClose.slice(0, 7)}`;
+
+export function radarSubject(forecasts: Forecast[]): string {
+  if (!forecasts.length) return 'Re-tender Radar: no new forecasts this month';
+  const top = forecasts[0] as Forecast;
+  return forecasts.length === 1
+    ? `Re-tender Radar: ${top.buyerName} expected back on the market`
+    : `Re-tender Radar: ${forecasts.length} contracts coming back to market`;
+}
+
+export function radarHtml(o: RadarEmailOptions): string {
+  const rows = o.forecasts
+    .map((f) => {
+      const conf = Math.round(f.confidence * 100);
+      return `
+      <tr><td style="padding:16px 0;border-bottom:1px solid #e6e8ec">
+        <div style="font-size:12px;color:#6b7280;letter-spacing:.02em">
+          ${escapeHtml(f.buyerCountry ?? '??')} · CPV ${escapeHtml(f.cpvFamily)} · confidence ${conf}%
+        </div>
+        <a href="${escapeHtml(`${config.baseUrl}/buyer/${encodeURIComponent(f.buyerSlug)}`)}"
+           style="display:block;margin:4px 0;font-size:16px;font-weight:600;color:#111827;text-decoration:none">
+          ${escapeHtml(f.buyerName)}
+        </a>
+        <div style="font-size:14px;color:#374151;line-height:1.5">
+          Expected back on the market <strong>${escapeHtml(fmtWindow(f))}</strong>
+          (contract projected to expire ${escapeHtml(f.expiryDate)}).
+        </div>
+        <div style="font-size:13px;color:#374151;margin-top:8px">
+          <strong>Incumbent:</strong> ${escapeHtml(f.incumbent ?? 'not disclosed')} &nbsp;·&nbsp;
+          <strong>Last value:</strong> ${escapeHtml(money(f.lastValueAmount, f.lastValueCurrency))}
+        </div>
+        <div style="font-size:12px;color:#5b6472;margin-top:6px">Why: ${escapeHtml(f.reasons.join(' · '))}</div>
+      </td></tr>`;
+    })
+    .join('');
+
+  const upsell = o.teaser
+    ? `<div style="margin:24px 0;padding:16px;background:#f1f5ff;border-radius:10px;font-size:14px;color:#1f2937">
+         <strong>${o.lockedCount ?? 0} more forecasts match your profile.</strong>
+         Edge shows every predicted re-tender in your sectors — the buyer, the incumbent to displace,
+         the last contract value and the month the notice is expected — ${escapeHtml(config.billing.edgePriceLabel)}.
+         <div style="margin-top:12px"><a href="${escapeHtml(`${config.baseUrl}/pricing`)}"
+           style="background:#1d4ed8;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block">
+           Unlock Re-tender Radar</a></div>
+       </div>`
+    : '';
+
+  return `<!doctype html><html><body style="margin:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <div style="max-width:640px;margin:0 auto;padding:24px 20px;background:#ffffff">
+    <div style="font-size:18px;font-weight:700;color:#111827">${escapeHtml(config.brand.name)} · Re-tender Radar</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:16px">
+      Contracts in your sectors that are due back on the market — before the notice is published.
+    </div>
+    ${o.forecasts.length
+      ? `<table width="100%" cellpadding="0" cellspacing="0">${rows}</table>`
+      : '<p style="font-size:14px;color:#374151">No contracts in your sectors are forecast to re-tender this month.</p>'}
+    ${upsell}
+    <div style="margin-top:28px;font-size:12px;color:#9ca3af;line-height:1.6">
+      Forecasts are statistical estimates from published TED award notices and the four-year cap on
+      framework agreements (Art. 33(1), Directive 2014/24/EU). They are not announcements.<br>
+      <a href="${escapeHtml(o.accountUrl)}" style="color:#6b7280">Adjust filters</a> ·
+      <a href="${escapeHtml(o.unsubscribeUrl)}" style="color:#6b7280">Unsubscribe</a><br>
+      ${escapeHtml(config.brand.legalName)} · ${escapeHtml(config.brand.legalAddress)}
+    </div>
+  </div></body></html>`;
+}
+
+export function radarText(o: RadarEmailOptions): string {
+  const lines = o.forecasts.map((f) =>
+    [
+      `${f.buyerName} (${f.buyerCountry ?? '??'}) — CPV ${f.cpvFamily}`,
+      `  Expected on the market: ${fmtWindow(f)} (expiry ~${f.expiryDate}, confidence ${Math.round(f.confidence * 100)}%)`,
+      `  Incumbent: ${f.incumbent ?? 'not disclosed'} · Last value: ${money(f.lastValueAmount, f.lastValueCurrency)}`,
+      `  ${config.baseUrl}/buyer/${encodeURIComponent(f.buyerSlug)}`,
+    ].join('\n'),
+  );
+  const head = `${config.brand.name} — Re-tender Radar\n\nContracts due back on the market in your sectors.\n\n`;
+  const tail = o.teaser
+    ? `\n\n${o.lockedCount ?? 0} more forecasts are locked. Unlock Edge: ${config.baseUrl}/pricing\n`
+    : '\n';
+  return `${head}${lines.join('\n\n') || 'No forecasts this month.'}${tail}
+Forecasts are estimates from published TED award notices, not announcements.
+Adjust filters: ${o.accountUrl}
+Unsubscribe: ${o.unsubscribeUrl}
+${config.brand.legalName} · ${config.brand.legalAddress}`;
 }

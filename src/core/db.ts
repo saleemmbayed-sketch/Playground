@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS notices (
   url_html          TEXT,
   language          TEXT,
   raw               TEXT NOT NULL,              -- original JSON for reprocessing
+  winner_names      TEXT,                       -- semicolon-joined winners (award notices)
+  buyer_identifier  TEXT,                       -- stable buyer registry id, when TED supplies one
+  is_award          INTEGER NOT NULL DEFAULT 0, -- 1 = contract award notice (can-*)
   summary           TEXT,                       -- plain-language summary (LLM or fallback)
   summary_source    TEXT,                       -- 'llm' | 'heuristic'
   first_seen_at     TEXT NOT NULL,
@@ -66,6 +69,34 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 -- Every match ever sent: guarantees a subscriber never sees the same notice twice.
+-- Re-tender Radar forecasts: one row per (buyer, CPV family) pipeline opportunity.
+CREATE TABLE IF NOT EXISTS forecasts (
+  id                  TEXT PRIMARY KEY,         -- hash of buyer_key + cpv_family
+  buyer_key           TEXT NOT NULL,            -- buyer_identifier when present, else slug of name
+  buyer_name          TEXT NOT NULL,
+  buyer_slug          TEXT NOT NULL,
+  buyer_country       TEXT,
+  cpv_family          TEXT NOT NULL,
+  last_award_id       TEXT,                     -- notice id of the most recent award
+  last_award_date     TEXT,                     -- ISO date
+  last_value_amount   REAL,
+  last_value_currency TEXT,
+  incumbent           TEXT,                     -- winner name(s) of the last award
+  observations        INTEGER NOT NULL DEFAULT 1,
+  cycle_months        REAL NOT NULL,            -- observed or assumed contract cycle
+  cycle_source        TEXT NOT NULL,            -- 'observed' | 'assumed'
+  expiry_date         TEXT NOT NULL,            -- predicted end of incumbent contract
+  window_open         TEXT NOT NULL,            -- predicted earliest re-tender publication
+  window_close        TEXT NOT NULL,            -- predicted latest re-tender publication
+  confidence          REAL NOT NULL,            -- 0..1
+  reasons             TEXT NOT NULL,            -- JSON array of explanations
+  superseded_by       TEXT,                     -- notice id if the re-tender already published
+  computed_at         TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_forecasts_window ON forecasts(window_open);
+CREATE INDEX IF NOT EXISTS idx_forecasts_slug ON forecasts(buyer_slug);
+CREATE INDEX IF NOT EXISTS idx_notices_award ON notices(is_award, cpv_main, publication_date);
+
 CREATE TABLE IF NOT EXISTS deliveries (
   subscriber_id INTEGER NOT NULL REFERENCES subscribers(id) ON DELETE CASCADE,
   notice_id     TEXT NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
@@ -127,6 +158,10 @@ const MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
   { table: 'notices', column: 'summary_source', ddl: 'ALTER TABLE notices ADD COLUMN summary_source TEXT' },
   { table: 'subscribers', column: 'confirmed_at', ddl: 'ALTER TABLE subscribers ADD COLUMN confirmed_at TEXT' },
   { table: 'subscribers', column: 'source', ddl: "ALTER TABLE subscribers ADD COLUMN source TEXT DEFAULT 'web'" },
+  // Re-tender Radar: award-notice intelligence.
+  { table: 'notices', column: 'winner_names', ddl: 'ALTER TABLE notices ADD COLUMN winner_names TEXT' },
+  { table: 'notices', column: 'buyer_identifier', ddl: 'ALTER TABLE notices ADD COLUMN buyer_identifier TEXT' },
+  { table: 'notices', column: 'is_award', ddl: 'ALTER TABLE notices ADD COLUMN is_award INTEGER NOT NULL DEFAULT 0' },
 ];
 
 function migrate(d: DatabaseSync): void {

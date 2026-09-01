@@ -8,6 +8,34 @@ import {
 
 let client: Stripe | null = null;
 
+/** Paid tiers. 'pro' = daily alerts; 'edge' = alerts + Re-tender Radar + buyer intel. */
+export type Tier = 'pro' | 'edge';
+
+export function priceIdFor(tier: Tier): string {
+  return tier === 'edge' ? config.stripe.edgePriceId : config.stripe.priceId;
+}
+
+/** Maps a Stripe price back to a plan so webhook upgrades/downgrades stick. */
+export function tierForPrice(priceId: string | null | undefined): Tier | null {
+  if (!priceId) return null;
+  if (config.stripe.edgePriceId && priceId === config.stripe.edgePriceId) return 'edge';
+  if (config.stripe.priceId && priceId === config.stripe.priceId) return 'pro';
+  return null;
+}
+
+/** True when the Edge tier is sellable (a price has been provisioned for it). */
+export function edgeEnabled(): boolean {
+  return Boolean(config.stripe.secretKey && config.stripe.edgePriceId);
+}
+
+/** Radar is the paid hero feature: Edge subscribers in good standing only. */
+export function hasRadarAccess(
+  sub: { plan?: string | null; status?: string | null } | null | undefined,
+): boolean {
+  if (!sub) return false;
+  return sub.plan === 'edge' && (sub.status === 'active' || sub.status === 'trialing');
+}
+
 export function stripeEnabled(): boolean {
   return Boolean(config.stripe.secretKey && config.stripe.priceId);
 }
@@ -20,21 +48,27 @@ export function stripe(): Stripe {
   return client;
 }
 
-export async function createCheckoutSession(email: string): Promise<string> {
+export async function createCheckoutSession(email: string, tier: Tier = 'pro'): Promise<string> {
   const sub = createSubscriber(email);
+  const price = priceIdFor(tier);
+  if (!price) throw new Error(`No Stripe price configured for the "${tier}" tier`);
   const session = await stripe().checkout.sessions.create({
     mode: 'subscription',
-    line_items: [{ price: config.stripe.priceId, quantity: 1 }],
+    line_items: [{ price, quantity: 1 }],
+    metadata: { tier },
     customer_email: sub.stripe_customer_id ? undefined : sub.email,
     customer: sub.stripe_customer_id ?? undefined,
     client_reference_id: String(sub.id),
     allow_promotion_codes: true,
-    subscription_data: config.billing.trialDays > 0 ? { trial_period_days: config.billing.trialDays } : undefined,
+    subscription_data: {
+      metadata: { tier },
+      ...(config.billing.trialDays > 0 ? { trial_period_days: config.billing.trialDays } : {}),
+    },
     success_url: `${config.baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config.baseUrl}/pricing?canceled=1`,
     automatic_tax: { enabled: false },
   });
-  logEvent('stripe.checkout.created', { subscriberId: sub.id, sessionId: session.id });
+  logEvent('stripe.checkout.created', { subscriberId: sub.id, sessionId: session.id, tier });
   if (!session.url) throw new Error('Stripe returned no checkout URL');
   return session.url;
 }
@@ -87,10 +121,11 @@ export async function handleWebhook(
       // (The buyer may pay with a different address than the one they signed up with.)
       const byRef = s.client_reference_id ? getSubscriber(Number(s.client_reference_id)) : null;
       const subscriber = byRef ?? (email ? createSubscriber(email) : null);
+      const boughtTier: Tier = s.metadata?.tier === 'edge' ? 'edge' : 'pro';
       if (subscriber) {
         setSubscriberStatus(subscriber.id, {
           status: config.billing.trialDays > 0 ? 'trialing' : 'active',
-          plan: 'pro',
+          plan: boughtTier,
           stripe_customer_id: typeof s.customer === 'string' ? s.customer : (s.customer?.id ?? null),
           stripe_sub_id: typeof s.subscription === 'string' ? s.subscription : (s.subscription?.id ?? null),
         });
@@ -98,7 +133,9 @@ export async function handleWebhook(
         confirmSubscriber(subscriber.id);
         // Paid customers default to daily delivery — that is the product they bought.
         updateProfile(subscriber.id, { cadence: 'daily' });
-        logEvent('stripe.subscription.started', { subscriberId: subscriber.id, email: subscriber.email });
+        logEvent('stripe.subscription.started', {
+          subscriberId: subscriber.id, email: subscriber.email, tier: boughtTier,
+        });
       } else {
         logEvent('stripe.checkout.unmatched', { sessionId: s.id, email });
       }
@@ -118,9 +155,13 @@ export async function handleWebhook(
           ? 'canceled'
           : (STATUS_MAP[sub.status] ?? 'free');
         const periodEndTs = (sub as unknown as { current_period_end?: number }).current_period_end;
+        // The price on the subscription is the source of truth for the tier,
+        // so upgrades and downgrades made in the billing portal are honoured.
+        const priceTier = tierForPrice(sub.items?.data?.[0]?.price?.id) ?? (local.plan as Tier) ?? 'pro';
+        const paid = status === 'active' || status === 'trialing';
         setSubscriberStatus(local.id, {
           status,
-          plan: status === 'active' || status === 'trialing' ? 'pro' : 'free',
+          plan: paid ? priceTier : 'free',
           stripe_sub_id: sub.id,
           current_period_end: periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null,
         });

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config.js';
 import { db, logEvent, withJobRun } from '../core/db.js';
-import { fetchNotices } from '../ingest/ted.js';
+import { fetchAwards, fetchNotices } from '../ingest/ted.js';
 import { recentNotices, upsertNotices } from '../core/notices.js';
 import { enrichPending } from '../core/summarize.js';
 import { matchNotices, type Profile } from '../core/match.js';
@@ -11,7 +11,11 @@ import {
 } from '../core/subscribers.js';
 import { accountUrl, unsubscribeUrl } from '../core/tokens.js';
 import { resetSendCounter, sendMail } from '../core/mailer.js';
-import { alertEmail, digestHtml, digestSubject, digestText } from '../core/templates.js';
+import {
+  alertEmail, digestHtml, digestSubject, digestText, radarHtml, radarSubject, radarText,
+} from '../core/templates.js';
+import { listForecasts, refreshRadar } from '../core/radar.js';
+import { hasRadarAccess } from '../core/billing.js';
 
 const daysAgoIso = (days: number): string => new Date(Date.now() - days * 86_400_000).toISOString();
 
@@ -232,6 +236,10 @@ export function startScheduler(): void {
     }
     if (due('backup', config.jobs.digestHourUtc + 1)) await runBackup();
     if (due('prune', 3, now.getUTCDay() === 0)) await runPrune();
+    // Awards move slowly: refresh the radar and mail it once a month.
+    const dayOfMonth = now.getUTCDate();
+    if (due('awards', 2, dayOfMonth === 1)) await runAwardIngest();
+    if (due('radar', config.jobs.digestHourUtc, dayOfMonth === 1)) await runRadarDigest();
     if (ran.size > 40) ran.clear();
   };
 
@@ -290,6 +298,95 @@ export async function runPrune(retainDays = 400) {
     const after = (db().prepare('SELECT COUNT(*) c FROM notices').get() as any).c as number;
     const stats = { noticesBefore: Number(before), noticesAfter: Number(after), removed: Number(before) - Number(after) };
     logEvent('prune.done', stats);
+    return stats;
+  });
+}
+
+/* ------------------------------------------------------ Re-tender Radar --- */
+
+/**
+ * Pulls historical contract award notices and rebuilds the forecast table.
+ *
+ * This is the input to the hero feature. Awards change slowly, so this runs
+ * monthly rather than daily — one TED pass per month is well inside fair use.
+ */
+export async function runAwardIngest(opts: { lookbackDays?: number } = {}) {
+  return guarded('ingest.awards', async () => {
+    const fetched = await fetchAwards({ lookbackDays: opts.lookbackDays });
+    const { inserted, updated } = upsertNotices(fetched.notices);
+    const radar = refreshRadar();
+    logEvent('ingest.awards.done', { inserted, updated, ...radar });
+    return {
+      fetched: fetched.notices.length,
+      inserted,
+      updated,
+      source: fetched.source,
+      strategy: fetched.strategy,
+      forecasts: radar.forecasts,
+    };
+  });
+}
+
+/** Recomputes forecasts from awards already stored. Cheap, no network. */
+export async function runRadarRefresh() {
+  return guarded('radar.refresh', async () => refreshRadar());
+}
+
+/**
+ * Monthly Re-tender Radar email.
+ *
+ * Edge subscribers get every forecast in their sectors. Everyone else gets a
+ * single teaser row plus a locked count — the forecast itself is the upsell,
+ * because no competitor can show it to them.
+ */
+export async function runRadarDigest(opts: { dryRun?: boolean } = {}) {
+  return guarded('radar.digest', async () => {
+    resetSendCounter();
+    const subs = [...payingSubscribers(), ...freeSubscribers()];
+    const stats = { recipients: subs.length, emailsSent: 0, forecastsSent: 0, teasers: 0, failed: 0, skippedEmpty: 0 };
+
+    for (const s of subs) {
+      if (opts.dryRun) continue;
+      const full = hasRadarAccess(s);
+      const all = listForecasts({
+        cpvPrefixes: s.profile.cpv_prefixes ? s.profile.cpv_prefixes.split(',') : undefined,
+        countries: s.profile.countries ? s.profile.countries.split(',').filter(Boolean) : undefined,
+        minConfidence: full ? 0.35 : 0.5,
+        limit: full ? 40 : 6,
+      });
+      if (!all.length) {
+        stats.skippedEmpty += 1;
+        continue;
+      }
+      const shown = full ? all : all.slice(0, 1);
+      const payload = {
+        forecasts: shown,
+        accountUrl: accountUrl(s.id),
+        unsubscribeUrl: unsubscribeUrl(s.id),
+        teaser: !full,
+        lockedCount: full ? 0 : Math.max(0, all.length - shown.length),
+      };
+      try {
+        const res = await sendMail({
+          to: s.email,
+          subject: radarSubject(shown),
+          html: radarHtml(payload),
+          text: radarText(payload),
+          unsubscribeUrl: payload.unsubscribeUrl,
+        });
+        if (res.ok) {
+          stats.emailsSent += 1;
+          stats.forecastsSent += shown.length;
+          if (!full) stats.teasers += 1;
+        }
+      } catch (err) {
+        stats.failed += 1;
+        logEvent('radar.recipient.failed', {
+          subscriberId: s.id, error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    logEvent('radar.digest.done', stats);
     return stats;
   });
 }
