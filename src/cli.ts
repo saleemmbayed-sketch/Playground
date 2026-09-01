@@ -23,6 +23,7 @@ import {
 } from './core/subscribers.js';
 import { verifyMailConfig } from './core/mailer.js';
 import { stripeEnabled } from './core/billing.js';
+import { patchEnvFile, setupStripe } from './core/provision.js';
 
 const argv = process.argv.slice(2);
 const cmd = argv[0] ?? 'help';
@@ -116,6 +117,31 @@ async function main(): Promise<void> {
     case 'prune':
       print('prune', await runPrune(Number.parseInt(flag('retain-days') ?? '400', 10)));
       break;
+    case 'setup-stripe': {
+      const amount = Number.parseInt(flag('amount') ?? '2900', 10);
+      const currency = flag('currency') ?? 'eur';
+      console.log(`Provisioning Stripe for ${config.baseUrl} ...`);
+      const res = await setupStripe({ amountCents: amount, currency });
+      console.log(`
+  product         ${res.productId}${res.reused.includes('product') ? ' (existing)' : ' (created)'}
+  price           ${res.priceId}${res.reused.includes('price') ? ' (existing)' : ' (created)'}
+  webhook         ${res.webhookId}${res.reused.includes('webhook') ? ' (existing)' : ' (created)'}
+  customer portal ${res.portalConfigured ? 'configured' : 'enable it once at dashboard.stripe.com/settings/billing/portal'}
+`);
+      const updates: Record<string, string> = { STRIPE_PRICE_ID: res.priceId };
+      if (res.webhookSecret) updates.STRIPE_WEBHOOK_SECRET = res.webhookSecret;
+      if (patchEnvFile(updates)) {
+        console.log(`  .env updated with ${Object.keys(updates).join(' and ')}`);
+      } else {
+        console.log('  Add these to your .env:');
+        for (const [k, v] of Object.entries(updates)) console.log(`    ${k}=${v}`);
+      }
+      if (!res.webhookSecret && res.reused.includes('webhook')) {
+        console.log('  Webhook already existed — copy its signing secret from the Stripe dashboard if not set.');
+      }
+      console.log('\n  Restart the app so the new values load, then run: npm run cli -- doctor\n');
+      break;
+    }
     case 'doctor': {
       // Pre-launch readiness check: fails loudly on anything that would break in production.
       const problems: string[] = [];
@@ -167,6 +193,8 @@ async function main(): Promise<void> {
         '  prune [--retain-days 400]   drop stale notices/events\n' +
         '  stats                       counts + last job runs\n' +
         '  check-ted [--days N]        live API contract smoke test\n' +
+        '  setup-stripe [--amount 2900] [--currency eur]',
+        '                              create product, price, webhook and portal in Stripe',
         '  doctor                      pre-launch readiness check',
       );
   }

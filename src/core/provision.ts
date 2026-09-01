@@ -1,29 +1,18 @@
 /**
- * One-command provisioning + preflight checks.
+ * One-command Stripe provisioning.
  *
- * `setup-stripe` creates the product, the recurring price, the webhook endpoint and turns on
- * the customer portal via the Stripe API, then prints the three env values to paste. That
- * replaces roughly fifteen clicks in the Stripe dashboard and is the step most likely to be
- * misconfigured by hand.
+ * Creates the product, the recurring price, the webhook endpoint (with exactly the events the
+ * app handles) and the customer portal, then writes the resulting IDs back into .env. That
+ * replaces roughly fifteen dashboard clicks and removes the step most likely to be
+ * misconfigured by hand — a wrong webhook secret means subscriptions silently never activate.
  *
- * `doctor` verifies every external dependency the business needs before launch.
+ * Idempotent: re-running finds what already exists instead of creating duplicates.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import Stripe from 'stripe';
+import { stripe } from './billing.js';
 import { config } from '../config.js';
-import { stripe, stripeEnabled } from './billing.js';
-import { verifyMailConfig } from './mailer.js';
-import { countNotices, noticeStats } from './notices.js';
-import { subscriberStats } from './subscribers.js';
-import { fetchNotices, buildQuery } from '../ingest/ted.js';
-
-export interface CheckResult {
-  name: string;
-  ok: boolean;
-  detail: string;
-  fatal: boolean;
-}
 
 const WEBHOOK_EVENTS: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
   'checkout.session.completed',
@@ -149,140 +138,4 @@ export function patchEnvFile(updates: Record<string, string>, envPath = path.res
   }
   fs.writeFileSync(envPath, text);
   return true;
-}
-
-/* -------------------------------------------------------------------------- */
-/* doctor                                                                     */
-/* -------------------------------------------------------------------------- */
-
-export async function runDoctor(): Promise<CheckResult[]> {
-  const results: CheckResult[] = [];
-  const add = (name: string, ok: boolean, detail: string, fatal = false) =>
-    results.push({ name, ok, detail, fatal });
-
-  // 1. Configuration sanity
-  const secretOk =
-    config.security.secret !== 'dev-insecure-secret-change-me' && config.security.secret.length >= 32;
-  add(
-    'APP_SECRET',
-    secretOk,
-    config.security.secret === 'dev-insecure-secret-change-me'
-      ? 'still the insecure default — run `npm run setup` or set APP_SECRET'
-      : secretOk
-        ? 'set, 32+ chars'
-        : `only ${config.security.secret.length} chars — use 32+ (openssl rand -hex 32)`,
-    true,
-  );
-  add(
-    'BASE_URL',
-    /^https?:\/\/.+/.test(config.baseUrl) && !config.baseUrl.endsWith('/'),
-    config.baseUrl,
-    true,
-  );
-  const isProdUrl = config.baseUrl.startsWith('https://');
-  add('HTTPS', isProdUrl, isProdUrl ? 'https base URL' : 'http base URL — fine locally, not for launch', false);
-  add(
-    'Legal details',
-    !config.brand.legalAddress.includes('Set LEGAL_ADDRESS'),
-    config.brand.legalAddress.includes('Set LEGAL_ADDRESS')
-      ? 'LEGAL_ADDRESS not set — required for a German Impressum'
-      : `${config.brand.legalName}, ${config.brand.legalAddress}`,
-    false,
-  );
-
-  // 2. Live data source
-  if (config.ted.offline) {
-    add('TED API', false, 'TED_OFFLINE=true — running on fixtures, not live EU data', false);
-  } else {
-    try {
-      const res = await fetchNotices({ lookbackDays: 3 });
-      add(
-        'TED API',
-        res.notices.length > 0,
-        res.notices.length
-          ? `${res.notices.length} notices over ${res.pages} page(s); fields used: ${res.fieldsUsed.length}${res.degraded ? ' (some fields dropped)' : ''}`
-          : `reachable but returned 0 notices — check the query: ${buildQuery(3)}`,
-        true,
-      );
-    } catch (err) {
-      add('TED API', false, err instanceof Error ? err.message : String(err), true);
-    }
-  }
-
-  // 3. Database
-  try {
-    const stats = noticeStats();
-    add(
-      'Database',
-      true,
-      `${stats.total} notices, ${stats.last7} in the last 7 days, ${subscriberStats().total} subscribers`,
-      false,
-    );
-    add(
-      'Archive depth',
-      countNotices() >= 50,
-      countNotices() >= 50
-        ? 'enough content for the public archive to rank'
-        : 'thin archive — run `npm run cli -- ingest --days 30` before launch',
-      false,
-    );
-  } catch (err) {
-    add('Database', false, err instanceof Error ? err.message : String(err), true);
-  }
-
-  // 4. Email
-  const mail = await verifyMailConfig();
-  add(
-    'Email transport',
-    mail.ok && config.mail.transport === 'smtp',
-    config.mail.transport === 'outbox'
-      ? 'outbox mode — emails are written to data/outbox, nothing is delivered'
-      : mail.detail,
-    false,
-  );
-  add(
-    'From address',
-    !config.brand.fromEmail.endsWith('@localhost'),
-    config.brand.fromEmail,
-    false,
-  );
-
-  // 5. Payments
-  if (!stripeEnabled()) {
-    add('Stripe', false, 'STRIPE_SECRET_KEY / STRIPE_PRICE_ID missing — nobody can pay yet', false);
-  } else {
-    try {
-      const price = await stripe().prices.retrieve(config.stripe.priceId);
-      const amount = price.unit_amount ? (price.unit_amount / 100).toFixed(2) : '?';
-      add('Stripe price', price.active, `${amount} ${price.currency?.toUpperCase()} / ${price.recurring?.interval ?? 'one-off'}`, false);
-      const hooks = await stripe().webhookEndpoints.list({ limit: 100 });
-      const hook = hooks.data.find((w) => w.url === `${config.baseUrl}/stripe/webhook`);
-      add(
-        'Stripe webhook',
-        Boolean(hook && hook.status === 'enabled'),
-        hook ? `${hook.url} (${hook.status})` : `no endpoint for ${config.baseUrl}/stripe/webhook — run \`setup-stripe\``,
-        false,
-      );
-      add(
-        'Webhook secret',
-        Boolean(config.stripe.webhookSecret),
-        config.stripe.webhookSecret ? 'set' : 'STRIPE_WEBHOOK_SECRET missing — subscription updates will be rejected',
-        false,
-      );
-    } catch (err) {
-      add('Stripe', false, err instanceof Error ? err.message : String(err), false);
-    }
-  }
-
-  // 6. Scheduling
-  add(
-    'Scheduler',
-    config.jobs.enabled,
-    config.jobs.enabled
-      ? `ingest ${config.jobs.ingestHourUtc}:00 UTC, digests ${config.jobs.digestHourUtc}:00 UTC`
-      : 'disabled — you must trigger /ops/* from external cron',
-    false,
-  );
-
-  return results;
 }

@@ -121,6 +121,8 @@ Useful commands:
 ```bash
 npm test                     # 57 tests, no network required
 npm run typecheck            # strict TypeScript
+npm run setup                # interactive wizard: writes a complete .env, generates APP_SECRET
+npm run cli -- setup-stripe  # creates product, price, webhook and portal; writes IDs into .env
 npm run cli -- doctor        # pre-launch readiness check
 npm run cli -- preview you@example.com    # score today's pool for one subscriber
 npm run cli -- check-ted     # live TED API contract smoke test (needs internet)

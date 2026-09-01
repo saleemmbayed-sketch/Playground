@@ -15,6 +15,7 @@ COPY --from=build /prod_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 COPY data/fixtures ./data/fixtures
+COPY public ./public
 RUN mkdir -p /app/data && chown -R app:app /app/data
 USER app
 VOLUME ["/app/data"]

@@ -145,7 +145,10 @@ console.log(`
 ${c.green('✓')} Wrote ${c.b('.env')}${fs.existsSync(`${ENV_PATH}.bak`) ? c.dim(' (previous version saved as .env.bak)') : ''}
 
 ${c.b('Next steps')}
-  1. ${c.b('npm run cli -- doctor')}          check every dependency end to end
-${wantsStripe && !env.STRIPE_PRICE_ID ? `  2. ${c.b('npm run cli -- setup-stripe')}    create the product, price and webhook automatically\n` : ''}  ${wantsStripe && !env.STRIPE_PRICE_ID ? '3' : '2'}. ${c.b('npm run cli -- ingest --days 30')}  fill the archive so the site has content
-  ${wantsStripe && !env.STRIPE_PRICE_ID ? '4' : '3'}. ${c.b('docker compose up -d')}          go live
+  1. ${c.b('npm run cli -- setup-stripe')}     create the product, price, webhook and portal
+  2. ${c.b('npm run cli -- ingest --days 30')} fill the archive so the site has content
+  3. ${c.b('npm run doctor')}                  verify every dependency end to end
+  4. ${c.b('docker compose up -d')}            go live
+
+${c.dim('Full checklist: LAUNCH.md')}
 `);

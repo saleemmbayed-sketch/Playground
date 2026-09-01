@@ -1,4 +1,7 @@
 import Fastify from 'fastify';
+import fastifyStatic from '@fastify/static';
+import nodePath from 'node:path';
+import nodeFs from 'node:fs';
 import formbody from '@fastify/formbody';
 import { config, isProd } from './config.js';
 import { closeDb, db, logEvent } from './core/db.js';
@@ -33,6 +36,13 @@ export function buildServer() {
 
   // HTML forms post application/x-www-form-urlencoded.
   app.register(formbody);
+
+  // Brand assets (favicon, OG share image). Registered only when present so a slim
+  // deployment still boots; cached hard since they only change with a deploy.
+  const publicDir = nodePath.resolve(process.cwd(), 'public');
+  if (nodeFs.existsSync(publicDir)) {
+    app.register(fastifyStatic, { root: publicDir, prefix: '/static/', cacheControl: true, maxAge: '7d' });
+  }
 
   // Stripe needs the raw body to verify signatures.
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {

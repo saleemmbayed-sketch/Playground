@@ -371,3 +371,28 @@ test('health reports degradation without failing the container liveness probe', 
   assert.equal(recovered.degraded, false, JSON.stringify(recovered.problems));
   assert.ok(recovered.notices > 0);
 });
+
+test('brand assets and social metadata are served', async () => {
+  // OG/Twitter cards decide whether a shared link looks like a product or a broken URL.
+  const home = await app.inject({ method: 'GET', url: '/' });
+  assert.match(home.body, /<meta property="og:image" content="https:\/\/example\.test\/static\/og-image\.png">/);
+  assert.match(home.body, /<meta name="twitter:card" content="summary_large_image">/);
+  assert.match(home.body, /<link rel="icon" type="image\/png" href="\/static\/logo\.png">/);
+
+  const logo = await app.inject({ method: 'GET', url: '/static/logo.png' });
+  assert.equal(logo.statusCode, 200);
+  assert.match(String(logo.headers['content-type']), /image\/png/);
+  assert.match(String(logo.headers['cache-control']), /max-age=\d+/);
+
+  const og = await app.inject({ method: 'GET', url: '/static/og-image.png' });
+  assert.equal(og.statusCode, 200);
+
+  // Static serving must not become a file-read primitive.
+  const escape = await app.inject({ method: 'GET', url: '/static/../../package.json' });
+  assert.notEqual(escape.statusCode, 200);
+});
+
+test('canonical og:url tracks the current page', async () => {
+  const pricing = await app.inject({ method: 'GET', url: '/pricing' });
+  assert.match(pricing.body, /<meta property="og:url" content="https:\/\/example\.test\/pricing">/);
+});

@@ -61,6 +61,11 @@ Deliverability *is* the product. A digest in spam is worth nothing.
 
 ## 4. Billing (≈20 min)
 
+- [ ] Put your Stripe secret key in `.env`, then run **`npm run cli -- setup-stripe`**. It creates
+      the product, the €29/month recurring price, the webhook endpoint (with exactly the events
+      the app handles) and the Customer Portal, and writes `STRIPE_PRICE_ID` and
+      `STRIPE_WEBHOOK_SECRET` back into `.env`. Re-running it is safe. The three items below are
+      then already done — verify rather than redo them.
 - [ ] Stripe product created: recurring, €29/month. Copy the **price ID** → `STRIPE_PRICE_ID`.
 - [ ] **BLOCKER** Webhook endpoint added in Stripe → `https://yourdomain/stripe/webhook`,
       events: `checkout.session.completed`, `customer.subscription.created`,
