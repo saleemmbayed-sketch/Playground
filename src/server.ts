@@ -4,13 +4,29 @@ import { config, isProd } from './config.js';
 import { db, logEvent } from './core/db.js';
 import { countNotices, getNotice, listNotices, noticeStats } from './core/notices.js';
 import {
-  createSubscriber, getProfile, getSubscriber, isValidEmail, subscriberStats,
-  unsubscribe, updateProfile,
+  confirmSubscriber, createSubscriber, getProfile, getSubscriber, getSubscriberByEmail,
+  isValidEmail, subscriberStats, suppress, unsubscribe, updateProfile,
 } from './core/subscribers.js';
-import { signToken, verifyToken, unsubscribeUrl } from './core/tokens.js';
+import { accountUrl, signToken, verifyToken, unsubscribeUrl } from './core/tokens.js';
 import { createCheckoutSession, createPortalSession, handleWebhook, stripeEnabled } from './core/billing.js';
-import { startScheduler, runDailyDigest, runIngest, runWeeklyDigest } from './jobs/index.js';
+import {
+  runBackup, runDailyDigest, runIngest, runPrune, runWeeklyDigest, startScheduler,
+} from './jobs/index.js';
 import { CPV_SECTORS, h, layout, money, tenderCard } from './web/views.js';
+import { rateLimit, startRateLimitSweeper } from './web/ratelimit.js';
+import { sendMail } from './core/mailer.js';
+import { accountLinkEmail, confirmEmail } from './core/templates.js';
+
+async function runNamedJob(job: string): Promise<unknown | null> {
+  switch (job) {
+    case 'ingest': return runIngest();
+    case 'digest-daily': return runDailyDigest();
+    case 'digest-weekly': return runWeeklyDigest();
+    case 'backup': return runBackup();
+    case 'prune': return runPrune();
+    default: return null;
+  }
+}
 
 export function buildServer() {
   const app = Fastify({ logger: { level: isProd ? 'info' : 'warn' } });
@@ -30,6 +46,22 @@ export function buildServer() {
 
   const html = (reply: any, body: string) => reply.type('text/html; charset=utf-8').send(body);
 
+  /** Returns a 429 reply when the caller is over budget, otherwise null. */
+  const limitOr429 = (req: any, reply: any, bucket: string, max: number, windowMs: number) => {
+    const ip = (req.headers['x-forwarded-for']?.split(',')[0] ?? req.ip ?? 'unknown').trim();
+    const { ok, retryAfter } = rateLimit(`${bucket}:${ip}`, max, windowMs);
+    if (ok) return null;
+    logEvent('ratelimit.hit', { bucket, ip });
+    return reply
+      .code(429)
+      .header('retry-after', String(retryAfter))
+      .type('text/html; charset=utf-8')
+      .send(layout({
+        title: 'Too many requests',
+        body: `<div class="notice error">Too many requests. Try again in ${retryAfter} seconds.</div>`,
+      }));
+  };
+
   // ---------------------------------------------------------------- landing
   app.get('/', async (_req, reply) => {
     const stats = noticeStats();
@@ -45,6 +77,7 @@ export function buildServer() {
         <select name="cpv_prefixes">
           ${CPV_SECTORS.map((s) => `<option value="${s.code}">${h(s.label)}</option>`).join('')}
         </select>
+        <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
         <button class="btn" type="submit">Get free weekly alerts</button>
       </form>
       <p style="color:#64748b;font-size:14px">Free weekly digest, no card. Pro (${h(config.billing.priceLabel)})
@@ -64,6 +97,9 @@ export function buildServer() {
       <div class="card"><h3>Plain-language briefs</h3><p>Each notice condensed to what is being bought, by whom, for how much, by when.</p></div>
       <div class="card"><h3>Silence when there is nothing</h3><p>No daily "0 results" email. We only write when there is something worth your time.</p></div>
     </div>
+
+    <h2>Browse by sector</h2>
+    <p>${CPV_SECTORS.map((s2) => `<a class="tag" href="/sectors/${s2.code}">${h(s2.label)}</a>`).join(' ')}</p>
 
     <h2>Latest indexed tenders</h2>
     ${latest.map(tenderCard).join('') || '<p>No notices indexed yet — run the ingest job.</p>'}
@@ -132,6 +168,52 @@ export function buildServer() {
     }));
   });
 
+  /**
+   * Sector landing pages. Each is a real, useful page targeting a buying-intent query
+   * ("EU IT services tenders"), backed by live data, with its own signup form.
+   * This is the organic acquisition surface that grows without any work from the operator.
+   */
+  app.get('/sectors/:code', async (req, reply) => {
+    const { code } = req.params as { code: string };
+    const sector = CPV_SECTORS.find((s2) => s2.code === code.replace(/\D/g, ''));
+    if (!sector) return reply.code(404).type('text/html').send(layout({ title: 'Not found', body: '<h1>Unknown sector</h1>' }));
+
+    const rows = listNotices({ limit: 20, cpvPrefix: sector.code });
+    const countries = db()
+      .prepare(
+        `SELECT buyer_country c, COUNT(*) n FROM notices
+         WHERE cpv LIKE ? AND buyer_country IS NOT NULL
+         GROUP BY buyer_country ORDER BY n DESC LIMIT 8`,
+      )
+      .all(`${sector.code}%`) as any[];
+
+    const body = `
+      <h1 style="margin-top:32px">${h(sector.label)} tenders in the EU</h1>
+      <p class="lede">Every CPV ${h(sector.code)}xxxxxx notice published on TED, indexed daily and
+      summarised in plain English. ${rows.length ? `Showing the ${rows.length} most recent.` : ''}</p>
+      <form class="inline" method="post" action="/subscribe">
+        <input type="email" name="email" placeholder="you@company.com" required>
+        <input type="hidden" name="cpv_prefixes" value="${h(sector.code)}">
+        <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
+        <button class="btn" type="submit">Email me new ${h(sector.label.toLowerCase())} tenders</button>
+      </form>
+      ${countries.length ? `<p style="font-size:14px;color:#64748b">Most active buyers by country:
+        ${countries.map((c) => `${h(c.c)} (${c.n})`).join(' · ')}</p>` : ''}
+      <h2>Recent notices</h2>
+      ${rows.map(tenderCard).join('') || '<p>No notices indexed in this sector yet.</p>'}
+      <p style="margin-top:24px"><a class="btn secondary" href="/tenders?cpv=${h(sector.code)}">Browse all →</a></p>
+      <h2>Other sectors</h2>
+      <p>${CPV_SECTORS.filter((s2) => s2.code !== sector.code)
+        .map((s2) => `<a class="tag" href="/sectors/${s2.code}">${h(s2.label)}</a>`).join(' ')}</p>`;
+
+    return html(reply, layout({
+      title: `${sector.label} tenders in the EU — ${config.brand.name}`,
+      description: `Live EU public procurement notices for ${sector.label.toLowerCase()} (CPV ${sector.code}), updated daily from the official TED feed.`,
+      canonical: `${config.baseUrl}/sectors/${sector.code}`,
+      body,
+    }));
+  });
+
   // -------------------------------------------------------------- pricing
   app.get('/pricing', async (req, reply) => {
     const canceled = (req.query as any).canceled ? '<div class="notice">Checkout canceled — no charge was made.</div>' : '';
@@ -162,27 +244,83 @@ export function buildServer() {
   });
 
   // ------------------------------------------------------------ subscribe
+  //
+  // Double opt-in: the address is stored unconfirmed and receives nothing but a
+  // confirmation email until the user clicks. Required under GDPR + German UWG §7,
+  // and it is also the single best protection for sender reputation.
   app.post('/subscribe', async (req, reply) => {
+    const limited = limitOr429(req, reply, 'subscribe', 5, 60_000);
+    if (limited) return limited;
+
     const b = (req.body ?? {}) as Record<string, string>;
     const email = (b.email ?? '').trim();
+    if (b.website) return html(reply, layout({ title: 'Thanks', body: '<p>Thanks.</p>' })); // honeypot
     if (!isValidEmail(email)) {
-      return html(reply.code(400), layout({ title: 'Invalid email', body: '<div class="notice error">That email address does not look valid.</div><p><a href="/">Try again</a></p>' }));
+      return html(reply.code(400), layout({
+        title: 'Invalid email',
+        body: '<div class="notice error">That email address does not look valid.</div><p><a href="/">Try again</a></p>',
+      }));
     }
+
     const sub = createSubscriber(email, {
       cpv_prefixes: (b.cpv_prefixes ?? '72,48').replace(/[^\d,]/g, '') || '72,48',
       cadence: 'weekly',
     });
     logEvent('subscriber.created', { id: sub.id, source: 'landing' });
-    const token = signToken({ sub: sub.id, scope: 'account' });
-    const body = `<h1 style="margin-top:32px">You're in.</h1>
-      <p class="lede">Your first weekly digest goes out on the next run. Tune your filters now so it lands relevant.</p>
-      <p><a class="btn" href="/account?t=${encodeURIComponent(token)}">Set my filters →</a></p>
-      <p style="margin-top:20px"><a href="/pricing">Or upgrade to daily alerts (${h(config.billing.priceLabel)})</a></p>`;
-    return html(reply, layout({ title: 'Subscribed', body }));
+
+    if (sub.confirmed_at) {
+      const token = signToken({ sub: sub.id, scope: 'account' });
+      return html(reply, layout({
+        title: 'Already subscribed',
+        body: `<h1 style="margin-top:32px">You're already subscribed.</h1>
+          <p class="lede">Nothing to do. You can fine-tune your filters any time.</p>
+          <p><a class="btn" href="/account?t=${encodeURIComponent(token)}">Adjust my filters →</a></p>`,
+      }));
+    }
+
+    const confirmUrl = `${config.baseUrl}/confirm?t=${signToken({ sub: sub.id, scope: 'confirm' }, 30)}`;
+    const mail = confirmEmail(confirmUrl);
+    await sendMail({ to: sub.email, ...mail }).catch((err) => req.log.error(err));
+
+    const devHint = config.mail.transport === 'outbox'
+      ? `<p style="font-size:13px;color:#6b7280">Dev mode: confirmation written to data/outbox.
+         <a href="${h(confirmUrl)}">Confirm now</a>.</p>`
+      : '';
+    return html(reply, layout({
+      title: 'Confirm your subscription',
+      body: `<h1 style="margin-top:32px">Check your inbox.</h1>
+        <p class="lede">We sent a confirmation link to <strong>${h(sub.email)}</strong>.
+        Click it and your alerts start — we send nothing until you do.</p>${devHint}`,
+    }));
+  });
+
+  app.get('/confirm', async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    const claims = q.t ? verifyToken<{ sub: number; scope: string }>(q.t) : null;
+    if (!claims?.sub || claims.scope !== 'confirm' || !getSubscriber(claims.sub)) {
+      return html(reply.code(400), layout({
+        title: 'Link expired',
+        body: `<h1 style="margin-top:32px">That link has expired.</h1>
+          <p class="lede">Confirmation links are valid for 30 days.
+          <a href="/">Sign up again</a> and we'll send a fresh one.</p>`,
+      }));
+    }
+    confirmSubscriber(claims.sub);
+    logEvent('subscriber.confirmed', { id: claims.sub });
+    const token = signToken({ sub: claims.sub, scope: 'account' });
+    return html(reply, layout({
+      title: 'Subscription confirmed',
+      body: `<h1 style="margin-top:32px">Confirmed. You're in.</h1>
+        <p class="lede">Your first weekly digest goes out on the next run. Tune your filters now so it lands relevant.</p>
+        <p><a class="btn" href="/account?t=${encodeURIComponent(token)}">Set my filters →</a>
+        <a class="btn secondary" style="margin-left:10px" href="/pricing">Upgrade to daily alerts</a></p>`,
+    }));
   });
 
   // ------------------------------------------------------------- checkout
   app.post('/checkout', async (req, reply) => {
+    const limited = limitOr429(req, reply, 'checkout', 10, 60_000);
+    if (limited) return limited;
     const b = (req.body ?? {}) as Record<string, string>;
     const email = (b.email ?? '').trim();
     if (!isValidEmail(email)) return reply.code(400).send({ error: 'invalid email' });
@@ -304,11 +442,20 @@ export function buildServer() {
   });
 
   app.post('/account/link', async (req, reply) => {
-    // Deliberately always answers the same way (no account enumeration).
+    const limited = limitOr429(req, reply, 'account-link', 5, 300_000);
+    if (limited) return limited;
+
     const b = (req.body ?? {}) as Record<string, string>;
+    const email = (b.email ?? '').trim();
+    const sub = isValidEmail(email) ? getSubscriberByEmail(email) : null;
+    if (sub) {
+      const mail = accountLinkEmail(accountUrl(sub.id));
+      await sendMail({ to: sub.email, ...mail }).catch((err) => req.log.error(err));
+    }
+    logEvent('account.link.requested', { found: Boolean(sub) });
+    // Identical response either way: no account enumeration.
     const body = `<h1 style="margin-top:32px">Check your inbox</h1>
-      <p class="lede">If ${h(b.email ?? 'that address')} is subscribed, your private settings link is on its way.</p>`;
-    logEvent('account.link.requested', { email: b.email });
+      <p class="lede">If ${h(email || 'that address')} is subscribed, your private settings link is on its way.</p>`;
     return html(reply, layout({ title: 'Link sent', body }));
   });
 
@@ -361,6 +508,7 @@ export function buildServer() {
   app.get('/sitemap.xml', async (_req, reply) => {
     const rows = listNotices({ limit: 5000 });
     const urls = ['', '/tenders', '/pricing', '/legal']
+      .concat(CPV_SECTORS.map((s2) => `/sectors/${s2.code}`))
       .map((p) => `<url><loc>${config.baseUrl}${p}</loc></url>`)
       .concat(rows.map((n) => `<url><loc>${config.baseUrl}/tender/${encodeURIComponent(n.id)}</loc>${
         n.publication_date ? `<lastmod>${n.publication_date}</lastmod>` : ''}</url>`));
@@ -405,17 +553,114 @@ export function buildServer() {
     };
   });
 
+  /**
+   * Operator dashboard. Token-gated with APP_SECRET so there is no login to maintain:
+   *   https://yourdomain/admin?key=$APP_SECRET
+   */
+  app.get('/admin', async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    if (q.key !== config.security.secret) {
+      return reply.code(403).type('text/html').send(layout({
+        title: 'Forbidden',
+        body: '<div class="notice error">Add ?key=YOUR_APP_SECRET to this URL.</div>',
+      }));
+    }
+    const d = db();
+    const subs = subscriberStats();
+    const notices = noticeStats();
+    const mrr = subs.paying * (Number.parseFloat((config.billing.priceLabel.match(/[\d.]+/) ?? ['0'])[0]) || 0);
+    const jobs = d
+      .prepare('SELECT job, started_at, ended_at, ok, stats, error FROM job_runs ORDER BY id DESC LIMIT 15')
+      .all() as any[];
+    const recentSubs = d
+      .prepare('SELECT email, status, plan, confirmed_at, created_at FROM subscribers ORDER BY id DESC LIMIT 15')
+      .all() as any[];
+    const funnel = d
+      .prepare(`SELECT kind, COUNT(*) c FROM events WHERE created_at >= date('now','-30 day') GROUP BY kind ORDER BY c DESC LIMIT 15`)
+      .all() as any[];
+
+    const jobRows = jobs.map((j) => `<tr>
+      <td>${h(j.job)}</td><td>${h((j.started_at ?? '').slice(0, 19).replace('T', ' '))}</td>
+      <td>${j.ok === 1 ? '<span style="color:#166534">ok</span>' : j.ok === 0 ? '<span style="color:#991b1b">FAILED</span>' : 'running'}</td>
+      <td style="font-size:12px;color:#475569">${h((j.error ?? j.stats ?? '').slice(0, 160))}</td></tr>`).join('');
+    const subRows = recentSubs.map((r) => `<tr><td>${h(r.email)}</td><td>${h(r.status)}</td>
+      <td>${r.confirmed_at ? 'yes' : '<span style="color:#b45309">pending</span>'}</td>
+      <td>${h((r.created_at ?? '').slice(0, 10))}</td></tr>`).join('');
+    const funnelRows = funnel.map((f) => `<tr><td>${h(f.kind)}</td><td>${f.c}</td></tr>`).join('');
+
+    const body = `<h1 style="margin-top:32px">Operations</h1>
+      <div class="grid">
+        <div class="card"><div class="stat">€${mrr.toLocaleString('en-GB')}</div><p>MRR (${subs.paying} paying)</p></div>
+        <div class="card"><div class="stat">${subs.confirmed}</div><p>confirmed subscribers</p></div>
+        <div class="card"><div class="stat">${subs.pending}</div><p>awaiting opt-in confirmation</p></div>
+        <div class="card"><div class="stat">${notices.total.toLocaleString('en-GB')}</div><p>notices (${notices.last7} in 7d)</p></div>
+        <div class="card"><div class="stat">${subs.suppressed}</div><p>suppressed addresses</p></div>
+        <div class="card"><div class="stat">${config.mail.transport}</div><p>mail transport · stripe ${stripeEnabled() ? 'on' : 'off'}</p></div>
+      </div>
+      <h2>Recent job runs</h2>
+      <table class="kv"><tr><td>Job</td><td>Started</td><td>Result</td><td>Detail</td></tr>${jobRows}</table>
+      <h2>Newest subscribers</h2>
+      <table class="kv"><tr><td>Email</td><td>Status</td><td>Confirmed</td><td>Joined</td></tr>${subRows}</table>
+      <h2>Events (30 days)</h2>
+      <table class="kv">${funnelRows}</table>
+      <h2>Run a job now</h2>
+      <form method="post" action="/admin/run?key=${h(q.key)}" class="inline">
+        <select name="job">
+          <option value="ingest">ingest</option>
+          <option value="digest-daily">digest-daily</option>
+          <option value="digest-weekly">digest-weekly</option>
+          <option value="backup">backup</option>
+          <option value="prune">prune</option>
+        </select>
+        <button class="btn" type="submit">Run</button>
+      </form>`;
+    return html(reply, layout({ title: 'Operations', body }));
+  });
+
+  app.post('/admin/run', async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    if (q.key !== config.security.secret) return reply.code(403).send({ error: 'forbidden' });
+    const job = ((req.body ?? {}) as any).job as string;
+    const result = await runNamedJob(job);
+    if (!result) return reply.code(404).send({ error: 'unknown job' });
+    return html(reply, layout({
+      title: 'Job finished',
+      body: `<h1 style="margin-top:32px">${h(job)}</h1>
+        <pre style="background:#f8fafc;padding:14px;border-radius:9px;overflow:auto;font-size:13px">${h(JSON.stringify(result, null, 2))}</pre>
+        <p><a class="btn secondary" href="/admin?key=${h(q.key)}">← Back</a></p>`,
+    }));
+  });
+
+  /**
+   * Bounce/complaint webhook for the email provider (Resend, Brevo, Mailgun, Postmark …).
+   * Point your ESP here with ?key=APP_SECRET. Any recognised bounce or complaint payload
+   * suppresses the address permanently, which is what keeps the sending domain healthy.
+   */
+  app.post('/mail/webhook', async (req, reply) => {
+    const q = req.query as Record<string, string | undefined>;
+    if (q.key !== config.security.secret) return reply.code(403).send({ error: 'forbidden' });
+    const payload = (req.body ?? {}) as any;
+    const flat = JSON.stringify(payload).toLowerCase();
+    const email: string | undefined =
+      payload?.data?.to?.[0] ?? payload?.email ?? payload?.recipient ?? payload?.Email ??
+      payload?.data?.email ?? payload?.['event-data']?.recipient;
+    const isBad = /bounce|complaint|complained|spam|dropped|failed|invalid/.test(flat);
+    if (email && isBad) {
+      suppress(email, /complain|spam/.test(flat) ? 'complaint' : 'hard-bounce', flat.slice(0, 300));
+      logEvent('mail.suppression.added', { email });
+      return reply.send({ suppressed: email });
+    }
+    return reply.send({ ignored: true });
+  });
+
   /** Manual job triggers, protected by APP_SECRET, for cron-from-outside setups. */
   app.post('/ops/:job', async (req, reply) => {
     const key = req.headers['x-ops-key'];
     if (key !== config.security.secret) return reply.code(403).send({ error: 'forbidden' });
     const { job } = req.params as { job: string };
-    switch (job) {
-      case 'ingest': return runIngest();
-      case 'digest-daily': return runDailyDigest();
-      case 'digest-weekly': return runWeeklyDigest();
-      default: return reply.code(404).send({ error: 'unknown job' });
-    }
+    const result = await runNamedJob(job);
+    if (!result) return reply.code(404).send({ error: 'unknown job' });
+    return result;
   });
 
   return app;
@@ -427,6 +672,7 @@ if (isMain) {
   app.listen({ port: config.port, host: config.host }).then(() => {
     console.log(`${config.brand.name} listening on http://${config.host}:${config.port}`);
     startScheduler();
+    startRateLimitSweeper();
   }).catch((err) => {
     console.error(err);
     process.exit(1);

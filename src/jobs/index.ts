@@ -1,5 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { config } from '../config.js';
-import { logEvent, withJobRun } from '../core/db.js';
+import { db, logEvent, withJobRun } from '../core/db.js';
 import { fetchNotices } from '../ingest/ted.js';
 import { recentNotices, upsertNotices } from '../core/notices.js';
 import { enrichPending } from '../core/summarize.js';
@@ -9,18 +11,39 @@ import {
 } from '../core/subscribers.js';
 import { accountUrl, unsubscribeUrl } from '../core/tokens.js';
 import { resetSendCounter, sendMail } from '../core/mailer.js';
-import { digestHtml, digestSubject, digestText } from '../core/templates.js';
+import { alertEmail, digestHtml, digestSubject, digestText } from '../core/templates.js';
 
 const daysAgoIso = (days: number): string => new Date(Date.now() - days * 86_400_000).toISOString();
 
+/**
+ * Runs a job and, if it fails, emails the operator once per job per day.
+ * This is what makes "autonomous" safe: silent breakage becomes a message in your inbox.
+ */
+async function guarded<T>(job: string, fn: () => Promise<T>) {
+  const res = await withJobRun(job, fn);
+  if (!res.ok && config.brand.replyTo) {
+    const dayKey = `alerted:${job}:${new Date().toISOString().slice(0, 10)}`;
+    const { kvGet, kvSet } = await import('../core/db.js');
+    if (!kvGet(dayKey)) {
+      kvSet(dayKey, '1');
+      const mail = alertEmail(job, res.error ?? 'unknown error');
+      await sendMail({ to: config.brand.replyTo, ...mail }).catch(() => undefined);
+    }
+  }
+  return res;
+}
+
 /** Pull the latest TED notices, store them, and write summaries. */
 export async function runIngest(opts: { lookbackDays?: number } = {}) {
-  return withJobRun('ingest', async () => {
+  return guarded('ingest', async () => {
     const fetched = await fetchNotices({ lookbackDays: opts.lookbackDays });
     const { inserted, updated } = upsertNotices(fetched.notices);
     const enriched = await enrichPending(Math.min(300, inserted + 25));
     const stats = {
       source: fetched.source,
+      strategy: fetched.strategy,
+      fieldSet: fetched.fieldSet,
+      discarded: fetched.discarded,
       fetched: fetched.notices.length,
       pages: fetched.pages,
       totalReported: fetched.totalReported,
@@ -86,7 +109,7 @@ async function sendDigestTo(
 
 /** Daily paid digest: every fresh match, no cap on relevance, sent only when non-empty. */
 export async function runDailyDigest(opts: { lookbackDays?: number; dryRun?: boolean } = {}) {
-  return withJobRun('digest.daily', async () => {
+  return guarded('digest.daily', async () => {
     resetSendCounter();
     const pool = recentNotices(daysAgoIso(opts.lookbackDays ?? 3));
     const subs = payingSubscribers().filter((s) => s.profile.cadence !== 'weekly');
@@ -117,7 +140,7 @@ export async function runDailyDigest(opts: { lookbackDays?: number; dryRun?: boo
 
 /** Weekly free digest: top 5 matches + upsell. This is the acquisition engine. */
 export async function runWeeklyDigest(opts: { dryRun?: boolean } = {}) {
-  return withJobRun('digest.weekly', async () => {
+  return guarded('digest.weekly', async () => {
     resetSendCounter();
     const pool = recentNotices(daysAgoIso(8));
     const subs = [
@@ -174,6 +197,8 @@ export function startScheduler(): void {
     if (due('weekly', config.jobs.digestHourUtc, now.getUTCDay() === config.jobs.weeklyDigestDay)) {
       await runWeeklyDigest();
     }
+    if (due('backup', config.jobs.digestHourUtc + 1)) await runBackup();
+    if (due('prune', 3, now.getUTCDay() === 0)) await runPrune();
     if (ran.size > 40) ran.clear();
   };
 
@@ -182,4 +207,56 @@ export function startScheduler(): void {
   console.log(
     `[scheduler] on — ingest ${config.jobs.ingestHourUtc}:00 UTC, digest ${config.jobs.digestHourUtc}:00 UTC, weekly on day ${config.jobs.weeklyDigestDay}`,
   );
+}
+
+/**
+ * Nightly SQLite backup with rotation. `VACUUM INTO` produces a consistent copy while
+ * the app keeps serving — no downtime, no lock contention.
+ */
+export async function runBackup(keep = 14) {
+  return withJobRun('backup', async () => {
+    const dir = path.resolve(path.dirname(config.db.file), 'backups');
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const target = path.join(dir, `tenderping-${stamp}.db`);
+    db().exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
+
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('tenderping-') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    const removed: string[] = [];
+    for (const f of files.slice(keep)) {
+      fs.unlinkSync(path.join(dir, f));
+      removed.push(f);
+    }
+    const stats = { file: target, sizeBytes: fs.statSync(target).size, kept: Math.min(files.length, keep), removed: removed.length };
+    logEvent('backup.done', stats);
+    return stats;
+  });
+}
+
+/**
+ * Keeps the database small and the archive fresh: drops notices whose deadline passed
+ * long ago. Delivery rows cascade, so dedupe history for live notices is preserved.
+ */
+export async function runPrune(retainDays = 400) {
+  return withJobRun('prune', async () => {
+    const cutoff = new Date(Date.now() - retainDays * 86_400_000).toISOString().slice(0, 10);
+    const before = (db().prepare('SELECT COUNT(*) c FROM notices').get() as any).c as number;
+    db()
+      .prepare(
+        `DELETE FROM notices
+         WHERE COALESCE(publication_date, substr(first_seen_at,1,10)) < ?
+           AND (deadline_date IS NULL OR deadline_date < date('now','-60 day'))`,
+      )
+      .run(cutoff);
+    db().prepare("DELETE FROM events WHERE created_at < date('now','-90 day')").run();
+    db().prepare("DELETE FROM job_runs WHERE started_at < date('now','-90 day')").run();
+    const after = (db().prepare('SELECT COUNT(*) c FROM notices').get() as any).c as number;
+    const stats = { noticesBefore: Number(before), noticesAfter: Number(after), removed: Number(before) - Number(after) };
+    logEvent('prune.done', stats);
+    return stats;
+  });
 }

@@ -13,7 +13,9 @@
     "start": "node dist/server.js",
     "cli": "tsx src/cli.ts",
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "demo": "node scripts/demo.mjs",
+    "doctor": "tsx src/cli.ts doctor"
   },
   "dependencies": {
     "@fastify/formbody": "^9.0.0",

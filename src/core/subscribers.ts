@@ -115,26 +115,70 @@ export function unsubscribe(id: number): void {
   setSubscriberStatus(id, { status: 'unsubscribed' });
 }
 
-/** Subscribers entitled to paid daily alerts. */
-export function payingSubscribers(): Array<Subscriber & { profile: Profile }> {
+/**
+ * Mailable audience. Two gates are always applied:
+ *  - the address must be confirmed (double opt-in, required under GDPR/UWG in Germany)
+ *  - the address must not be suppressed (hard bounce or spam complaint)
+ * Paying customers are exempt from the confirmation gate: paying for a service is
+ * unambiguous consent to receive it, and Stripe already verified the address.
+ */
+function audience(where: string, requireConfirmed: boolean): Array<Subscriber & { profile: Profile }> {
+  const confirmGate = requireConfirmed ? 'AND s.confirmed_at IS NOT NULL' : '';
   const rows = db()
     .prepare(
-      `SELECT s.*, p.* FROM subscribers s JOIN profiles p ON p.subscriber_id = s.id
-       WHERE s.status IN ('active','trialing')`,
+      `SELECT s.*, p.* FROM subscribers s
+       JOIN profiles p ON p.subscriber_id = s.id
+       LEFT JOIN suppressions sup ON sup.email = s.email
+       WHERE ${where} ${confirmGate} AND sup.email IS NULL`,
     )
     .all() as unknown as Array<Subscriber & Profile>;
   return rows.map((r) => ({ ...(r as any), profile: r as unknown as Profile }));
 }
 
-/** Free subscribers who get the weekly teaser digest. */
+/** Subscribers entitled to paid daily alerts. */
+export function payingSubscribers(): Array<Subscriber & { profile: Profile }> {
+  return audience("s.status IN ('active','trialing')", false);
+}
+
+/** Confirmed free subscribers who get the weekly teaser digest. */
 export function freeSubscribers(): Array<Subscriber & { profile: Profile }> {
-  const rows = db()
+  return audience("s.status = 'free'", true);
+}
+
+// ---------------------------------------------------------------- opt-in
+
+export function confirmSubscriber(id: number): void {
+  db()
+    .prepare('UPDATE subscribers SET confirmed_at = COALESCE(confirmed_at, ?), updated_at = ? WHERE id = ?')
+    .run(nowIso(), nowIso(), id);
+}
+
+export function isConfirmed(id: number): boolean {
+  const row = db().prepare('SELECT confirmed_at FROM subscribers WHERE id = ?').get(id) as
+    | { confirmed_at: string | null }
+    | undefined;
+  return Boolean(row?.confirmed_at);
+}
+
+// ------------------------------------------------------------ suppressions
+
+export function suppress(email: string, reason: string, detail?: string): void {
+  db()
     .prepare(
-      `SELECT s.*, p.* FROM subscribers s JOIN profiles p ON p.subscriber_id = s.id
-       WHERE s.status = 'free'`,
+      `INSERT INTO suppressions (email, reason, detail, created_at) VALUES (?,?,?,?)
+       ON CONFLICT(email) DO UPDATE SET reason = excluded.reason, detail = excluded.detail`,
     )
-    .all() as unknown as Array<Subscriber & Profile>;
-  return rows.map((r) => ({ ...(r as any), profile: r as unknown as Profile }));
+    .run(normalizeEmail(email), reason, detail ?? null, nowIso());
+}
+
+export function isSuppressed(email: string): boolean {
+  return Boolean(
+    db().prepare('SELECT 1 AS x FROM suppressions WHERE email = ?').get(normalizeEmail(email)),
+  );
+}
+
+export function suppressionCount(): number {
+  return Number((db().prepare('SELECT COUNT(*) c FROM suppressions').get() as any).c);
 }
 
 export function alreadyDelivered(subscriberId: number, noticeIds: string[]): Set<string> {
@@ -163,12 +207,17 @@ export function recordDeliveries(subscriberId: number, items: Array<{ id: string
   }
 }
 
-export function subscriberStats(): { total: number; paying: number; free: number } {
+export function subscriberStats(): {
+  total: number; paying: number; free: number; confirmed: number; pending: number; suppressed: number;
+} {
   const d = db();
   const g = (sql: string) => Number((d.prepare(sql).get() as any).c);
   return {
     total: g("SELECT COUNT(*) c FROM subscribers WHERE status != 'unsubscribed'"),
     paying: g("SELECT COUNT(*) c FROM subscribers WHERE status IN ('active','trialing')"),
     free: g("SELECT COUNT(*) c FROM subscribers WHERE status = 'free'"),
+    confirmed: g("SELECT COUNT(*) c FROM subscribers WHERE confirmed_at IS NOT NULL AND status != 'unsubscribed'"),
+    pending: g("SELECT COUNT(*) c FROM subscribers WHERE confirmed_at IS NULL AND status = 'free'"),
+    suppressed: g('SELECT COUNT(*) c FROM suppressions'),
   };
 }

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS notices (
   cpv               TEXT,                       -- comma separated CPV codes
   cpv_main          TEXT,
   notice_type       TEXT,
+  contract_nature   TEXT,
   publication_date  TEXT,                       -- ISO date
   deadline_date     TEXT,                       -- ISO date, may be null
   value_amount      REAL,
@@ -92,6 +93,14 @@ CREATE TABLE IF NOT EXISTS job_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_job_runs ON job_runs(job, started_at DESC);
 
+-- Addresses we must never mail again (hard bounces, spam complaints, manual blocks).
+CREATE TABLE IF NOT EXISTS suppressions (
+  email      TEXT PRIMARY KEY,
+  reason     TEXT NOT NULL,
+  detail     TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS kv (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL,
@@ -99,11 +108,40 @@ CREATE TABLE IF NOT EXISTS kv (
 );
 `;
 
+/**
+ * Additive migrations for databases created by an older version.
+ * `CREATE TABLE IF NOT EXISTS` never adds columns, so new columns are applied here.
+ * Every entry must be idempotent and safe to run on a live database.
+ */
+const MIGRATIONS: Array<{ table: string; column: string; ddl: string }> = [
+  { table: 'notices', column: 'contract_nature', ddl: 'ALTER TABLE notices ADD COLUMN contract_nature TEXT' },
+  { table: 'notices', column: 'summary', ddl: 'ALTER TABLE notices ADD COLUMN summary TEXT' },
+  { table: 'notices', column: 'summary_source', ddl: 'ALTER TABLE notices ADD COLUMN summary_source TEXT' },
+  { table: 'subscribers', column: 'confirmed_at', ddl: 'ALTER TABLE subscribers ADD COLUMN confirmed_at TEXT' },
+  { table: 'subscribers', column: 'source', ddl: "ALTER TABLE subscribers ADD COLUMN source TEXT DEFAULT 'web'" },
+];
+
+function migrate(d: DatabaseSync): void {
+  for (const m of MIGRATIONS) {
+    const cols = d.prepare(`PRAGMA table_info(${m.table})`).all() as unknown as Array<{ name: string }>;
+    if (!cols.length) continue; // table not created yet in this schema version
+    if (cols.some((c) => c.name === m.column)) continue;
+    try {
+      d.exec(m.ddl);
+      console.log(`[db] migrated: ${m.table}.${m.column}`);
+    } catch (err) {
+      console.error(`[db] migration failed for ${m.table}.${m.column}`, err);
+      throw err;
+    }
+  }
+}
+
 export function db(): DatabaseSync {
   if (_db) return _db;
   fs.mkdirSync(path.dirname(config.db.file), { recursive: true });
   const d = new DatabaseSync(config.db.file);
   d.exec(SCHEMA);
+  migrate(d);
   _db = d;
   return d;
 }

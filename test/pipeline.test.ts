@@ -13,11 +13,14 @@ process.env.APP_SECRET = 'test-secret';
 process.env.BASE_URL = 'https://example.test';
 
 const { upsertNotices, recentNotices, getNotice } = await import('../src/core/notices.ts');
-const { createSubscriber, getProfile, updateProfile, setSubscriberStatus, alreadyDelivered, recordDeliveries, subscriberStats, unsubscribe } =
-  await import('../src/core/subscribers.ts');
+const {
+  createSubscriber, getProfile, updateProfile, setSubscriberStatus, alreadyDelivered,
+  recordDeliveries, subscriberStats, unsubscribe, confirmSubscriber, suppress,
+  freeSubscribers, payingSubscribers,
+} = await import('../src/core/subscribers.ts');
 const { signToken, verifyToken } = await import('../src/core/tokens.ts');
 const { heuristicSummary, enrichPending } = await import('../src/core/summarize.ts');
-const { runDailyDigest } = await import('../src/jobs/index.ts');
+const { runDailyDigest, runWeeklyDigest, runBackup, runPrune } = await import('../src/jobs/index.ts');
 const { normalizeNotice } = await import('../src/ingest/ted.ts');
 
 const iso = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString().slice(0, 10);
@@ -102,6 +105,80 @@ test('unsubscribed users drop out of the audience', async () => {
   const sub = createSubscriber('bye@example.com');
   unsubscribe(sub.id);
   assert.equal(subscriberStats().total, before);
+});
+
+
+
+test('unconfirmed free subscribers are NEVER in the mailing audience', async () => {
+  const pending = createSubscriber('pending@example.com');
+  updateProfile(pending.id, { cpv_prefixes: '72', countries: 'DEU', cadence: 'weekly' });
+
+  assert.ok(
+    !freeSubscribers().some((s) => s.id === pending.id),
+    'an unconfirmed address must not receive marketing email (GDPR / UWG §7)',
+  );
+
+  confirmSubscriber(pending.id);
+  assert.ok(freeSubscribers().some((s) => s.id === pending.id), 'confirmed address joins the audience');
+});
+
+test('suppressed addresses drop out of every audience', () => {
+  const s = createSubscriber('bouncer@example.com');
+  updateProfile(s.id, { cpv_prefixes: '72', cadence: 'weekly' });
+  confirmSubscriber(s.id);
+  assert.ok(freeSubscribers().some((x) => x.id === s.id));
+
+  suppress('bouncer@example.com', 'hard-bounce');
+  assert.ok(!freeSubscribers().some((x) => x.id === s.id), 'bounced address must be excluded');
+
+  setSubscriberStatus(s.id, { status: 'active', plan: 'pro' });
+  assert.ok(!payingSubscribers().some((x) => x.id === s.id), 'even paying customers stop being mailed once suppressed');
+});
+
+test('paying customers are mailed without the confirmation gate', () => {
+  const s = createSubscriber('paid-unconfirmed@example.com');
+  updateProfile(s.id, { cpv_prefixes: '72', cadence: 'daily' });
+  setSubscriberStatus(s.id, { status: 'active', plan: 'pro' });
+  assert.ok(payingSubscribers().some((x) => x.id === s.id), 'payment is consent');
+});
+
+test('weekly free digest caps at 5 matches and upsells', async () => {
+  const s = createSubscriber('weekly@example.com');
+  updateProfile(s.id, { cpv_prefixes: '72', countries: 'DEU', cadence: 'weekly', min_score: 0.3 });
+  confirmSubscriber(s.id);
+
+  const res = await runWeeklyDigest();
+  assert.equal(res.ok, true);
+  assert.ok(res.result!.emailsSent >= 1);
+
+  const outbox = path.resolve(process.cwd(), 'data/outbox');
+  const file = fs.readdirSync(outbox).filter((f) => f.includes('weekly@example.com')).sort().pop()!;
+  const body = fs.readFileSync(path.join(outbox, file), 'utf8');
+  assert.match(body, /free weekly digest|Free weekly digest/i, 'free digest must carry the upgrade prompt');
+  fs.rmSync(path.join(outbox, file), { force: true });
+});
+
+test('backup produces a snapshot and prune keeps live notices', async () => {
+  const b = await runBackup(3);
+  assert.equal(b.ok, true);
+  assert.ok(fs.existsSync(b.result!.file));
+
+  const before = (await import('../src/core/notices.ts')).countNotices();
+  const p = await runPrune(400);
+  assert.equal(p.ok, true);
+  assert.equal(
+    (await import('../src/core/notices.ts')).countNotices(),
+    before,
+    'notices with future deadlines must survive pruning',
+  );
+});
+
+test('digest never emails an unsubscribed user', async () => {
+  const s = createSubscriber('gone@example.com');
+  updateProfile(s.id, { cpv_prefixes: '72', cadence: 'daily' });
+  setSubscriberStatus(s.id, { status: 'active', plan: 'pro' });
+  unsubscribe(s.id);
+  assert.ok(!payingSubscribers().some((x) => x.id === s.id));
 });
 
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));

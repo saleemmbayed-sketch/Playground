@@ -2,7 +2,8 @@ import Stripe from 'stripe';
 import { config } from '../config.js';
 import { logEvent } from './db.js';
 import {
-  createSubscriber, getSubscriberByCustomer, getSubscriberByEmail, setSubscriberStatus,
+  confirmSubscriber, createSubscriber, getSubscriber, getSubscriberByCustomer,
+  setSubscriberStatus, updateProfile,
 } from './subscribers.js';
 
 let client: Stripe | null = null;
@@ -67,9 +68,10 @@ export async function handleWebhook(rawBody: Buffer | string, signature: string)
     case 'checkout.session.completed': {
       const s = event.data.object as Stripe.Checkout.Session;
       const email = s.customer_details?.email ?? s.customer_email ?? '';
-      const subscriber =
-        (s.client_reference_id ? getSubscriberByEmail(email) ?? null : null) ??
-        (email ? createSubscriber(email) : null);
+      // Resolve in order of reliability: our own reference, then the Stripe email.
+      // (The buyer may pay with a different address than the one they signed up with.)
+      const byRef = s.client_reference_id ? getSubscriber(Number(s.client_reference_id)) : null;
+      const subscriber = byRef ?? (email ? createSubscriber(email) : null);
       if (subscriber) {
         setSubscriberStatus(subscriber.id, {
           status: config.billing.trialDays > 0 ? 'trialing' : 'active',
@@ -77,6 +79,13 @@ export async function handleWebhook(rawBody: Buffer | string, signature: string)
           stripe_customer_id: typeof s.customer === 'string' ? s.customer : (s.customer?.id ?? null),
           stripe_sub_id: typeof s.subscription === 'string' ? s.subscription : (s.subscription?.id ?? null),
         });
+        // Paying is unambiguous consent; skip the double opt-in gate for customers.
+        confirmSubscriber(subscriber.id);
+        // Paid customers default to daily delivery — that is the product they bought.
+        updateProfile(subscriber.id, { cadence: 'daily' });
+        logEvent('stripe.subscription.started', { subscriberId: subscriber.id, email: subscriber.email });
+      } else {
+        logEvent('stripe.checkout.unmatched', { sessionId: s.id, email });
       }
       break;
     }
@@ -86,6 +95,9 @@ export async function handleWebhook(rawBody: Buffer | string, signature: string)
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
       const local = getSubscriberByCustomer(customerId);
+      if (!local) {
+        logEvent('stripe.subscription.unmatched', { customerId, subId: sub.id });
+      }
       if (local) {
         const status = event.type === 'customer.subscription.deleted'
           ? 'canceled'
