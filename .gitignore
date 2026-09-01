@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# Runtime state — keep the machine's data out of git
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/outbox/
+!data/fixtures/
+
+*.log
+.DS_Store
+.env.bak
+.env.demo.bak
