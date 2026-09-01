@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import formbody from '@fastify/formbody';
 import { config, isProd } from './config.js';
-import { db, logEvent } from './core/db.js';
+import { closeDb, db, logEvent } from './core/db.js';
 import { countNotices, getNotice, listNotices, noticeStats } from './core/notices.js';
 import {
   confirmSubscriber, createSubscriber, getProfile, getSubscriber, getSubscriberByEmail,
@@ -538,19 +538,44 @@ export function buildServer() {
   });
 
   // ----------------------------------------------------------------- ops
-  app.get('/healthz', async () => {
+  app.get('/healthz', async (_req, reply) => {
     const jobs = db()
       .prepare('SELECT job, started_at, ended_at, ok, stats, error FROM job_runs ORDER BY id DESC LIMIT 8')
-      .all();
-    return {
-      ok: true,
+      .all() as Array<{ job: string; started_at: string; ended_at: string | null; ok: number | null; stats: string | null; error: string | null }>;
+
+    // Turn the raw job log into a single verdict an uptime monitor can alert on.
+    const problems: string[] = [];
+    const lastIngest = jobs.find((j) => j.job === 'ingest');
+    const staleAfterHours = 36;
+    if (!lastIngest) {
+      problems.push('no ingest has ever run');
+    } else {
+      const ageHours = (Date.now() - Date.parse(lastIngest.started_at)) / 3_600_000;
+      if (ageHours > staleAfterHours) problems.push(`last ingest was ${Math.round(ageHours)}h ago`);
+      if (lastIngest.ok === 0) problems.push('last ingest failed');
+    }
+    for (const j of jobs) {
+      if (j.ok === 0) problems.push(`${j.job} failed`);
+      const failed = Number(JSON.parse(j.stats ?? '{}')?.failed ?? 0);
+      if (failed > 0) problems.push(`${j.job}: ${failed} recipient send failure(s)`);
+    }
+
+    const degraded = problems.length > 0;
+    // Liveness (Docker healthcheck) and business-health (uptime monitor) are different
+    // questions. A brand-new box with no ingest yet is alive but degraded — returning 503
+    // here would make Docker restart-loop it. Monitors ask for ?strict=1.
+    const strict = (_req.query as Record<string, string | undefined>).strict === '1';
+    return reply.code(strict && degraded ? 503 : 200).send({
+      ok: !degraded,
+      degraded,
+      problems: [...new Set(problems)],
       notices: countNotices(),
       subscribers: subscriberStats(),
       stripe: stripeEnabled(),
       mail: config.mail.transport,
       offline: config.ted.offline,
       recentJobs: jobs,
-    };
+    });
   });
 
   /**
@@ -676,5 +701,39 @@ if (isMain) {
   }).catch((err) => {
     console.error(err);
     process.exit(1);
+  });
+
+  // Graceful shutdown: finish in-flight requests, checkpoint the WAL, then exit.
+  // Docker sends SIGTERM on `stop`/`restart`/redeploy; without this a send loop or a
+  // write can be cut mid-transaction.
+  let shuttingDown = false;
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[shutdown] ${signal} received, draining…`);
+    const forceExit = setTimeout(() => {
+      console.error('[shutdown] drain timed out after 15s, forcing exit');
+      process.exit(1);
+    }, 15_000);
+    forceExit.unref();
+    try {
+      await app.close();
+      closeDb();
+      console.log('[shutdown] clean');
+      process.exit(0);
+    } catch (err) {
+      console.error('[shutdown] error while draining', err);
+      process.exit(1);
+    }
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+
+  // A crash inside a background job must be logged, not silently swallowed.
+  process.on('unhandledRejection', (reason) => {
+    console.error('[unhandledRejection]', reason);
+    try {
+      logEvent('process.unhandledRejection', { reason: String(reason) });
+    } catch { /* logging must never mask the original failure */ }
   });
 }

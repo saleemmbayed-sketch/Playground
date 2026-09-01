@@ -87,7 +87,16 @@ test/                    57 tests: normaliser, money parsing, matcher, tokens, d
 - **Never repeat a notice.** A per-subscriber delivery ledger guarantees it.
 - **Explainable matches.** Each alert says *why* it matched, so users self-tune filters instead
   of emailing you.
-- **Failure is visible, not silent.** Every job run is persisted and exposed on `/healthz`.
+- **Failure is visible, not silent.** Every job run is persisted and exposed on `/healthz`,
+  which distinguishes a quiet day from a broken one (a send failure is counted as `failed`,
+  never as "nothing to send").
+- **Failures are isolated and retried.** One refused recipient cannot abort the run for
+  everyone else, and an undelivered digest is not marked delivered — so the next run
+  catches that subscriber up automatically.
+- **Duplicate-safe billing.** Stripe retries webhooks for days; each event id is claimed
+  once, so a replay cannot double-apply a subscription change.
+- **Clean shutdown.** SIGTERM drains in-flight requests and checkpoints the SQLite WAL,
+  so redeploys and restarts never corrupt or lose the last writes.
 - **Cost guards everywhere.** Per-run email cap, daily LLM budget cap, notice cap per ingest.
 - **It tells you when it breaks.** A failed job emails the operator once per day per job.
 - **It backs itself up.** Nightly `VACUUM INTO` snapshot, 14 kept, verified by a test that
@@ -180,7 +189,7 @@ The machine runs itself; distribution is the part that needs you, and only at th
 | Check | How |
 |---|---|
 | Everything at a glance | `/admin?key=$APP_SECRET` — MRR, subscribers, pending opt-ins, job runs, 30-day event funnel, and a button to run any job |
-| Jobs still succeeding | `GET /healthz` — last 8 job runs with stats and errors |
+| Jobs still succeeding | `GET /healthz` — last 8 job runs, plus a `problems[]` verdict. `?strict=1` returns 503 when degraded, so an uptime monitor pages you instead of you remembering to look. |
 | TED contract unchanged | `npm run cli -- check-ted` (also runs in CI, non-blocking) |
 | Deliverability | Your ESP dashboard: bounce < 2%, complaints < 0.1% |
 | Revenue | Stripe dashboard |

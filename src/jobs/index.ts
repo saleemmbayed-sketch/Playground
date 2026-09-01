@@ -63,6 +63,48 @@ interface DigestStats {
   emailsSent: number;
   matchesSent: number;
   skippedEmpty: number;
+  /** Real send failures (provider outage, refused recipient) — alert on this. */
+  failed: number;
+  /** Expected skips: suppressed addresses or the per-run send cap. */
+  skipped: number;
+}
+
+/**
+ * Sends to one subscriber without ever letting their failure abort the run.
+ *
+ * A single bad address, a provider hiccup or a per-recipient rejection must not cost
+ * every remaining subscriber their digest — that is the difference between "a customer
+ * complains" and "nobody got anything today and I found out a week later".
+ */
+async function sendDigestSafely(
+  sub: { id: number; email: string },
+  profile: Profile,
+  pool: ReturnType<typeof recentNotices>,
+  opts: Parameters<typeof sendDigestTo>[3],
+  stats: DigestStats,
+): Promise<void> {
+  try {
+    const r = await sendDigestTo(sub, profile, pool, opts);
+    if (r.sent) {
+      stats.emailsSent += 1;
+      stats.matchesSent += r.matches;
+    } else if (r.failure?.kind === 'error') {
+      stats.failed += 1;
+      logEvent('digest.recipient.failed', {
+        subscriberId: sub.id, email: sub.email, error: r.failure.detail,
+      });
+      console.error(`[digest] recipient ${sub.email} failed: ${r.failure.detail}`);
+    } else if (r.failure) {
+      stats.skipped += 1;
+    } else {
+      stats.skippedEmpty += 1;
+    }
+  } catch (err) {
+    stats.failed += 1;
+    const message = err instanceof Error ? err.message : String(err);
+    logEvent('digest.recipient.failed', { subscriberId: sub.id, email: sub.email, error: message });
+    console.error(`[digest] recipient ${sub.email} failed: ${message}`);
+  }
 }
 
 async function sendDigestTo(
@@ -70,7 +112,7 @@ async function sendDigestTo(
   profile: Profile,
   pool: ReturnType<typeof recentNotices>,
   opts: { limit: number; upsell: boolean; intro: string; period: string; skipIfEmpty: boolean },
-): Promise<{ sent: boolean; matches: number }> {
+): Promise<{ sent: boolean; matches: number; failure?: { kind: string; detail: string } }> {
   const scored = matchNotices(pool, profile);
   const seen = alreadyDelivered(sub.id, scored.map((s) => s.notice.id));
   const fresh = scored.filter((s) => !seen.has(s.notice.id));
@@ -96,7 +138,10 @@ async function sendDigestTo(
     text: digestText(payload),
     unsubscribeUrl: unsub,
   });
-  if (!res.ok) return { sent: false, matches: 0 };
+  if (!res.ok) {
+    // A provider outage must be visible as a failure, not hidden as a quiet day.
+    return { sent: false, matches: 0, failure: { kind: res.kind, detail: res.skipped } };
+  }
 
   // Record *all* fresh matches as delivered for paid daily sends so nothing repeats;
   // for the capped free digest only the shown ones are burned.
@@ -114,24 +159,18 @@ export async function runDailyDigest(opts: { lookbackDays?: number; dryRun?: boo
     const pool = recentNotices(daysAgoIso(opts.lookbackDays ?? 3));
     const subs = payingSubscribers().filter((s) => s.profile.cadence !== 'weekly');
     const stats: DigestStats = {
-      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0,
+      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0, failed: 0, skipped: 0,
     };
 
     for (const s of subs) {
       if (opts.dryRun) continue;
-      const r = await sendDigestTo(s, s.profile, pool, {
+      await sendDigestSafely(s, s.profile, pool, {
         limit: 40,
         upsell: false,
         intro: 'New tenders matching your profile',
         period: 'today',
         skipIfEmpty: true,
-      });
-      if (r.sent) {
-        stats.emailsSent += 1;
-        stats.matchesSent += r.matches;
-      } else {
-        stats.skippedEmpty += 1;
-      }
+      }, stats);
     }
     logEvent('digest.daily.done', stats);
     return stats;
@@ -148,25 +187,19 @@ export async function runWeeklyDigest(opts: { dryRun?: boolean } = {}) {
       ...payingSubscribers().filter((s) => s.profile.cadence === 'weekly'),
     ];
     const stats: DigestStats = {
-      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0,
+      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0, failed: 0, skipped: 0,
     };
 
     for (const s of subs) {
       if (opts.dryRun) continue;
       const isPaid = s.status === 'active' || s.status === 'trialing';
-      const r = await sendDigestTo(s, s.profile, pool, {
+      await sendDigestSafely(s, s.profile, pool, {
         limit: isPaid ? 40 : 5,
         upsell: !isPaid,
         intro: isPaid ? 'Your weekly tender round-up' : 'This week in EU public IT tenders',
         period: 'this week',
         skipIfEmpty: isPaid,
-      });
-      if (r.sent) {
-        stats.emailsSent += 1;
-        stats.matchesSent += r.matches;
-      } else {
-        stats.skippedEmpty += 1;
-      }
+      }, stats);
     }
     logEvent('digest.weekly.done', stats);
     return stats;

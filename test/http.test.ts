@@ -337,3 +337,37 @@ test.after(async () => {
   await app.close();
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+test('health reports degradation without failing the container liveness probe', async () => {
+  const { db } = await import('../src/core/db.ts');
+  const { runIngest } = await import('../src/jobs/index.ts');
+  await runIngest();
+
+  // Baseline: a working instance is healthy under both probes.
+  const healthy = JSON.parse((await get('/healthz')).body);
+  assert.equal(healthy.degraded, false, JSON.stringify(healthy.problems));
+  assert.equal((await get('/healthz?strict=1')).statusCode, 200);
+
+  // Now simulate last night's digest failing to reach 3 people.
+  const info = db()
+    .prepare("INSERT INTO job_runs (job, started_at, ended_at, ok, stats) VALUES ('digest.daily', datetime('now'), datetime('now'), 1, '{\"failed\":3}')")
+    .run();
+
+  const live = await get('/healthz');
+  const body = JSON.parse(live.body);
+  assert.equal(live.statusCode, 200, 'Docker liveness must stay 200 or the container restart-loops');
+  assert.equal(body.degraded, true);
+  assert.ok(
+    body.problems.some((p: string) => /3 recipient send failure/.test(p)),
+    `expected a send-failure problem, got ${JSON.stringify(body.problems)}`,
+  );
+
+  // An uptime monitor asks the strict question and gets a page-worthy 503.
+  assert.equal((await get('/healthz?strict=1')).statusCode, 503);
+
+  // Once the bad run ages out, the instance reports healthy again.
+  db().prepare('DELETE FROM job_runs WHERE id = ?').run(Number(info.lastInsertRowid));
+  const recovered = JSON.parse((await get('/healthz?strict=1')).body);
+  assert.equal(recovered.degraded, false, JSON.stringify(recovered.problems));
+  assert.ok(recovered.notices > 0);
+});

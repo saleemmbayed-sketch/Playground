@@ -101,6 +101,14 @@ CREATE TABLE IF NOT EXISTS suppressions (
   created_at TEXT NOT NULL
 );
 
+-- Stripe delivers each event at least once and retries for days; this table makes
+-- webhook processing idempotent (the PRIMARY KEY is the claim).
+CREATE TABLE IF NOT EXISTS stripe_events (
+  id          TEXT PRIMARY KEY,
+  type        TEXT NOT NULL,
+  received_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS kv (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL,
@@ -195,5 +203,24 @@ export async function withJobRun<T>(
       .run(nowIso(), message, id);
     console.error(`[job:${job}] failed`, err);
     return { ok: false, error: message };
+  }
+}
+
+/**
+ * Flushes the WAL into the main database file and closes the handle.
+ * Called on SIGTERM so a `docker compose restart` or a redeploy can never leave a
+ * half-written WAL behind, and so the nightly backup always has a clean file to copy.
+ */
+export function closeDb(): void {
+  if (!_db) return;
+  try {
+    _db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch {
+    /* checkpoint is best-effort; closing still flushes */
+  }
+  try {
+    _db.close();
+  } finally {
+    _db = null;
   }
 }

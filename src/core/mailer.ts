@@ -12,6 +12,14 @@ export function resetSendCounter(): void {
   sentThisRun = 0;
 }
 
+/**
+ * Drops the cached transporter so the next send rebuilds it from current config.
+ * Used after a transport/config change and by the resilience tests.
+ */
+export function resetTransport(): void {
+  transporter = null;
+}
+
 function getTransport(): Transporter {
   if (transporter) return transporter;
   if (config.mail.transport === 'smtp') {
@@ -34,15 +42,20 @@ export interface MailInput {
   unsubscribeUrl?: string;
 }
 
-export async function sendMail(msg: MailInput): Promise<{ ok: boolean; skipped?: string; file?: string }> {
+export type SendOutcome =
+  | { ok: true; file?: string }
+  /** kind lets callers tell a provider outage ('error') from an expected skip. */
+  | { ok: false; kind: 'suppressed' | 'capped' | 'error'; skipped: string };
+
+export async function sendMail(msg: MailInput): Promise<SendOutcome> {
   // Never mail a hard-bounced or complained address again: deliverability depends on it.
   if (isSuppressed(msg.to)) {
     logEvent('mail.suppressed', { to: msg.to, subject: msg.subject });
-    return { ok: false, skipped: 'address suppressed' };
+    return { ok: false, kind: 'suppressed', skipped: 'address suppressed' };
   }
   if (sentThisRun >= config.mail.maxPerRun) {
     logEvent('mail.capped', { to: msg.to });
-    return { ok: false, skipped: 'per-run send cap reached' };
+    return { ok: false, kind: 'capped', skipped: 'per-run send cap reached' };
   }
   sentThisRun += 1;
 
@@ -73,7 +86,7 @@ export async function sendMail(msg: MailInput): Promise<{ ok: boolean; skipped?:
       const { suppress } = await import('./subscribers.js');
       suppress(msg.to, 'hard-bounce', detail.slice(0, 300));
     }
-    return { ok: false, skipped: detail };
+    return { ok: false, kind: 'error', skipped: detail };
   }
 
   if (config.mail.transport === 'outbox') {

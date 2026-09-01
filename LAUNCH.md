@@ -39,6 +39,10 @@ docker compose exec app node dist/cli.js doctor
       (German law requires them on the site and in commercial email).
 - [ ] DNS A record → VPS IP; Caddy will issue TLS automatically on first request.
 - [ ] `curl https://yourdomain/healthz` returns `ok: true`.
+- [ ] Free uptime monitor (UptimeRobot / Better Stack) pointed at
+      `https://yourdomain/healthz?strict=1` every 5 min. It returns **503** when the
+      ingest is stale (>36h), a job failed, or a digest could not be delivered — which is
+      the only alarm you actually need for this business.
 
 ## 3. Email deliverability (≈30 min) — do not skip
 

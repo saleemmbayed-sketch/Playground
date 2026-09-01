@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { config } from '../config.js';
-import { logEvent } from './db.js';
+import { db, logEvent, nowIso } from './db.js';
 import {
   confirmSubscriber, createSubscriber, getSubscriber, getSubscriberByCustomer,
   setSubscriberStatus, updateProfile,
@@ -59,9 +59,24 @@ const STATUS_MAP: Record<string, string> = {
 };
 
 /** Verifies the signature and applies the subscription lifecycle to our DB. */
-export async function handleWebhook(rawBody: Buffer | string, signature: string): Promise<{ handled: string }> {
+export async function handleWebhook(
+  rawBody: Buffer | string,
+  signature: string,
+): Promise<{ handled: string; duplicate?: boolean }> {
   if (!config.stripe.webhookSecret) throw new Error('STRIPE_WEBHOOK_SECRET is not set');
   const event = stripe().webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret);
+
+  // Stripe guarantees at-least-once delivery and retries for up to 3 days, so the same
+  // event will arrive more than once. Claim it exactly once via a UNIQUE insert.
+  try {
+    db()
+      .prepare('INSERT INTO stripe_events (id, type, received_at) VALUES (?, ?, ?)')
+      .run(event.id, event.type, nowIso());
+  } catch {
+    logEvent('stripe.webhook.duplicate', { type: event.type, id: event.id });
+    return { handled: event.type, duplicate: true };
+  }
+
   logEvent('stripe.webhook', { type: event.type, id: event.id });
 
   switch (event.type) {
