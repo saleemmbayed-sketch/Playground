@@ -1,0 +1,3785 @@
+[
+  {
+    "publication-number": "400000-2026",
+    "notice-title": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services"
+      ],
+      "deu": [
+        "Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ],
+      "eng": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE144"
+    ],
+    "classification-cpv": [
+      "72212000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-08+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1440000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services. The contracting authority Stadt Ulm, Zentrale Vergabestelle invites tenders for a contract with an estimated volume of 1,440,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen. Der Auftraggeber Stadt Ulm, Zentrale Vergabestelle schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.440.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400137-2026",
+    "notice-title": {
+      "eng": [
+        "Procurement of a document management system including migration"
+      ],
+      "deu": [
+        "Beschaffung einer Dokumentenmanagement-Lösung (DMS)"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ],
+      "eng": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DEA22"
+    ],
+    "classification-cpv": [
+      "48311000",
+      "48000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-09+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 756600,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Procurement of a document management system including migration. The contracting authority Bundesamt für Sicherheit in der Informationstechnik invites tenders for a contract with an estimated volume of 756,600 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beschaffung einer Dokumentenmanagement-Lösung (DMS). Der Auftraggeber Bundesamt für Sicherheit in der Informationstechnik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 756.600 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400274-2026",
+    "notice-title": {
+      "eng": [
+        "IT security audit and penetration testing services"
+      ],
+      "deu": [
+        "IT-Sicherheitsaudit und Penetrationstests"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Landeshauptstadt Stuttgart"
+      ],
+      "eng": [
+        "Landeshauptstadt Stuttgart"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE111"
+    ],
+    "classification-cpv": [
+      "72500000",
+      "79212000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-10+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 254600,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "IT security audit and penetration testing services. The contracting authority Landeshauptstadt Stuttgart invites tenders for a contract with an estimated volume of 254,600 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "IT-Sicherheitsaudit und Penetrationstests. Der Auftraggeber Landeshauptstadt Stuttgart schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 254.600 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400411-2026",
+    "notice-title": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform"
+      ],
+      "deu": [
+        "Betrieb und Wartung der kommunalen Cloud-Plattform"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ],
+      "eng": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE600"
+    ],
+    "classification-cpv": [
+      "72514000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-11+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 2511000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform. The contracting authority Freie und Hansestadt Hamburg, Finanzbehörde invites tenders for a contract with an estimated volume of 2,511,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Betrieb und Wartung der kommunalen Cloud-Plattform. Der Auftraggeber Freie und Hansestadt Hamburg, Finanzbehörde schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 2.511.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400548-2026",
+    "notice-title": {
+      "eng": [
+        "Development of an online citizen services portal"
+      ],
+      "deu": [
+        "Entwicklung eines Onlineportals für Bürgerdienste"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesrechenzentrum GmbH"
+      ],
+      "eng": [
+        "Bundesrechenzentrum GmbH"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "72212000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-12+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 755200,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Development of an online citizen services portal. The contracting authority Bundesrechenzentrum GmbH invites tenders for a contract with an estimated volume of 755,200 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Entwicklung eines Onlineportals für Bürgerdienste. Der Auftraggeber Bundesrechenzentrum GmbH schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 755.200 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400685-2026",
+    "notice-title": {
+      "eng": [
+        "Supply of notebooks and peripheral devices"
+      ],
+      "deu": [
+        "Lieferung von Notebooks und Peripheriegeräten"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ],
+      "eng": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "30213100",
+      "30230000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-13+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 812500,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Supply of notebooks and peripheral devices. The contracting authority Stadt Wien - Magistratsabteilung 01 invites tenders for a contract with an estimated volume of 812,500 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Lieferung von Notebooks und Peripheriegeräten. Der Auftraggeber Stadt Wien - Magistratsabteilung 01 schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 812.500 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400822-2026",
+    "notice-title": {
+      "eng": [
+        "Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-14+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 969000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. The contracting authority Kanton Zürich, Amt für Informatik invites tenders for a contract with an estimated volume of 969,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics. Der Auftraggeber Kanton Zürich, Amt für Informatik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 969.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "400959-2026",
+    "notice-title": {
+      "eng": [
+        "Consultancy services for digital administration transformation"
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Ministerie van Binnenlandse Zaken"
+      ],
+      "eng": [
+        "Ministerie van Binnenlandse Zaken"
+      ]
+    },
+    "buyer-country": [
+      "NLD"
+    ],
+    "place-of-performance": [
+      "NL332"
+    ],
+    "classification-cpv": [
+      "72224000",
+      "79411000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-15+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 583800,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Consultancy services for digital administration transformation. The contracting authority Ministerie van Binnenlandse Zaken invites tenders for a contract with an estimated volume of 583,800 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung. Der Auftraggeber Ministerie van Binnenlandse Zaken schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 583.800 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401096-2026",
+    "notice-title": {
+      "eng": [
+        "SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-16+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1548000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. The contracting authority Région Auvergne-Rhône-Alpes invites tenders for a contract with an estimated volume of 1,548,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung. Der Auftraggeber Région Auvergne-Rhône-Alpes schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.548.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401233-2026",
+    "notice-title": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-17+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 627300,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. The contracting authority Comune di Milano invites tenders for a contract with an estimated volume of 627,300 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN. Der Auftraggeber Comune di Milano schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 627.300 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401370-2026",
+    "notice-title": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-18+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 59500,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). The contracting authority Universitätsklinikum Freiburg invites tenders for a contract with an estimated volume of 59,500 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites. Der Auftraggeber Universitätsklinikum Freiburg schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 59.500 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401507-2026",
+    "notice-title": {
+      "eng": [
+        "Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-19+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 155150,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. The contracting authority Deutsche Rentenversicherung Bund invites tenders for a contract with an estimated volume of 155,150 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz. Der Auftraggeber Deutsche Rentenversicherung Bund schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 155.150 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401644-2026",
+    "notice-title": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services"
+      ],
+      "deu": [
+        "Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ],
+      "eng": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE144"
+    ],
+    "classification-cpv": [
+      "72212000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-20+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 3456000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services. The contracting authority Stadt Ulm, Zentrale Vergabestelle invites tenders for a contract with an estimated volume of 3,456,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen. Der Auftraggeber Stadt Ulm, Zentrale Vergabestelle schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 3.456.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401781-2026",
+    "notice-title": {
+      "eng": [
+        "Procurement of a document management system including migration"
+      ],
+      "deu": [
+        "Beschaffung einer Dokumentenmanagement-Lösung (DMS)"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ],
+      "eng": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DEA22"
+    ],
+    "classification-cpv": [
+      "48311000",
+      "48000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-21+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 709800,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Procurement of a document management system including migration. The contracting authority Bundesamt für Sicherheit in der Informationstechnik invites tenders for a contract with an estimated volume of 709,800 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beschaffung einer Dokumentenmanagement-Lösung (DMS). Der Auftraggeber Bundesamt für Sicherheit in der Informationstechnik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 709.800 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "401918-2026",
+    "notice-title": {
+      "eng": [
+        "IT security audit and penetration testing services"
+      ],
+      "deu": [
+        "IT-Sicherheitsaudit und Penetrationstests"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Landeshauptstadt Stuttgart"
+      ],
+      "eng": [
+        "Landeshauptstadt Stuttgart"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE111"
+    ],
+    "classification-cpv": [
+      "72500000",
+      "79212000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-22+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 243200,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "IT security audit and penetration testing services. The contracting authority Landeshauptstadt Stuttgart invites tenders for a contract with an estimated volume of 243,200 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "IT-Sicherheitsaudit und Penetrationstests. Der Auftraggeber Landeshauptstadt Stuttgart schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 243.200 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402055-2026",
+    "notice-title": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform"
+      ],
+      "deu": [
+        "Betrieb und Wartung der kommunalen Cloud-Plattform"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ],
+      "eng": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE600"
+    ],
+    "classification-cpv": [
+      "72514000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-23+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 2325000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform. The contracting authority Freie und Hansestadt Hamburg, Finanzbehörde invites tenders for a contract with an estimated volume of 2,325,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Betrieb und Wartung der kommunalen Cloud-Plattform. Der Auftraggeber Freie und Hansestadt Hamburg, Finanzbehörde schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 2.325.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402192-2026",
+    "notice-title": {
+      "eng": [
+        "Development of an online citizen services portal"
+      ],
+      "deu": [
+        "Entwicklung eines Onlineportals für Bürgerdienste"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesrechenzentrum GmbH"
+      ],
+      "eng": [
+        "Bundesrechenzentrum GmbH"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "72212000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-24+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 716800,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Development of an online citizen services portal. The contracting authority Bundesrechenzentrum GmbH invites tenders for a contract with an estimated volume of 716,800 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Entwicklung eines Onlineportals für Bürgerdienste. Der Auftraggeber Bundesrechenzentrum GmbH schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 716.800 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402329-2026",
+    "notice-title": {
+      "eng": [
+        "Supply of notebooks and peripheral devices"
+      ],
+      "deu": [
+        "Lieferung von Notebooks und Peripheriegeräten"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ],
+      "eng": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "30213100",
+      "30230000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-25+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1862500,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Supply of notebooks and peripheral devices. The contracting authority Stadt Wien - Magistratsabteilung 01 invites tenders for a contract with an estimated volume of 1,862,500 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Lieferung von Notebooks und Peripheriegeräten. Der Auftraggeber Stadt Wien - Magistratsabteilung 01 schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.862.500 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402466-2026",
+    "notice-title": {
+      "eng": [
+        "Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-26+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 912000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. The contracting authority Kanton Zürich, Amt für Informatik invites tenders for a contract with an estimated volume of 912,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics. Der Auftraggeber Kanton Zürich, Amt für Informatik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 912.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402603-2026",
+    "notice-title": {
+      "eng": [
+        "Consultancy services for digital administration transformation"
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Ministerie van Binnenlandse Zaken"
+      ],
+      "eng": [
+        "Ministerie van Binnenlandse Zaken"
+      ]
+    },
+    "buyer-country": [
+      "NLD"
+    ],
+    "place-of-performance": [
+      "NL332"
+    ],
+    "classification-cpv": [
+      "72224000",
+      "79411000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-27+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 558600,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Consultancy services for digital administration transformation. The contracting authority Ministerie van Binnenlandse Zaken invites tenders for a contract with an estimated volume of 558,600 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung. Der Auftraggeber Ministerie van Binnenlandse Zaken schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 558.600 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402740-2026",
+    "notice-title": {
+      "eng": [
+        "SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-28+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1440000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. The contracting authority Région Auvergne-Rhône-Alpes invites tenders for a contract with an estimated volume of 1,440,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung. Der Auftraggeber Région Auvergne-Rhône-Alpes schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.440.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "402877-2026",
+    "notice-title": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-29+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 596700,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. The contracting authority Comune di Milano invites tenders for a contract with an estimated volume of 596,700 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN. Der Auftraggeber Comune di Milano schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 596.700 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403014-2026",
+    "notice-title": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-09-30+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 54400,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). The contracting authority Universitätsklinikum Freiburg invites tenders for a contract with an estimated volume of 54,400 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites. Der Auftraggeber Universitätsklinikum Freiburg schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 54.400 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403151-2026",
+    "notice-title": {
+      "eng": [
+        "Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-01+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 146450,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. The contracting authority Deutsche Rentenversicherung Bund invites tenders for a contract with an estimated volume of 146,450 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz. Der Auftraggeber Deutsche Rentenversicherung Bund schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 146.450 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403288-2026",
+    "notice-title": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services"
+      ],
+      "deu": [
+        "Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ],
+      "eng": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE144"
+    ],
+    "classification-cpv": [
+      "72212000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-02+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 3312000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services. The contracting authority Stadt Ulm, Zentrale Vergabestelle invites tenders for a contract with an estimated volume of 3,312,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen. Der Auftraggeber Stadt Ulm, Zentrale Vergabestelle schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 3.312.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403425-2026",
+    "notice-title": {
+      "eng": [
+        "Procurement of a document management system including migration"
+      ],
+      "deu": [
+        "Beschaffung einer Dokumentenmanagement-Lösung (DMS)"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ],
+      "eng": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DEA22"
+    ],
+    "classification-cpv": [
+      "48311000",
+      "48000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-03+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 663000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Procurement of a document management system including migration. The contracting authority Bundesamt für Sicherheit in der Informationstechnik invites tenders for a contract with an estimated volume of 663,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beschaffung einer Dokumentenmanagement-Lösung (DMS). Der Auftraggeber Bundesamt für Sicherheit in der Informationstechnik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 663.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403562-2026",
+    "notice-title": {
+      "eng": [
+        "IT security audit and penetration testing services"
+      ],
+      "deu": [
+        "IT-Sicherheitsaudit und Penetrationstests"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Landeshauptstadt Stuttgart"
+      ],
+      "eng": [
+        "Landeshauptstadt Stuttgart"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE111"
+    ],
+    "classification-cpv": [
+      "72500000",
+      "79212000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-04+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 231800,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "IT security audit and penetration testing services. The contracting authority Landeshauptstadt Stuttgart invites tenders for a contract with an estimated volume of 231,800 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "IT-Sicherheitsaudit und Penetrationstests. Der Auftraggeber Landeshauptstadt Stuttgart schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 231.800 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403699-2026",
+    "notice-title": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform"
+      ],
+      "deu": [
+        "Betrieb und Wartung der kommunalen Cloud-Plattform"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ],
+      "eng": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE600"
+    ],
+    "classification-cpv": [
+      "72514000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-05+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 2139000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform. The contracting authority Freie und Hansestadt Hamburg, Finanzbehörde invites tenders for a contract with an estimated volume of 2,139,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Betrieb und Wartung der kommunalen Cloud-Plattform. Der Auftraggeber Freie und Hansestadt Hamburg, Finanzbehörde schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 2.139.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403836-2026",
+    "notice-title": {
+      "eng": [
+        "Development of an online citizen services portal"
+      ],
+      "deu": [
+        "Entwicklung eines Onlineportals für Bürgerdienste"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesrechenzentrum GmbH"
+      ],
+      "eng": [
+        "Bundesrechenzentrum GmbH"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "72212000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-06+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 678400,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Development of an online citizen services portal. The contracting authority Bundesrechenzentrum GmbH invites tenders for a contract with an estimated volume of 678,400 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Entwicklung eines Onlineportals für Bürgerdienste. Der Auftraggeber Bundesrechenzentrum GmbH schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 678.400 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "403973-2026",
+    "notice-title": {
+      "eng": [
+        "Supply of notebooks and peripheral devices"
+      ],
+      "deu": [
+        "Lieferung von Notebooks und Peripheriegeräten"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ],
+      "eng": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "30213100",
+      "30230000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-07+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1787500,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Supply of notebooks and peripheral devices. The contracting authority Stadt Wien - Magistratsabteilung 01 invites tenders for a contract with an estimated volume of 1,787,500 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Lieferung von Notebooks und Peripheriegeräten. Der Auftraggeber Stadt Wien - Magistratsabteilung 01 schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.787.500 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "404110-2026",
+    "notice-title": {
+      "eng": [
+        "Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-09-01Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-08+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 855000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. The contracting authority Kanton Zürich, Amt für Informatik invites tenders for a contract with an estimated volume of 855,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Data-Warehouse-Modernisierung und Analytics. Der Auftraggeber Kanton Zürich, Amt für Informatik schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 855.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "404247-2026",
+    "notice-title": {
+      "eng": [
+        "Consultancy services for digital administration transformation"
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-31Z",
+    "buyer-name": {
+      "deu": [
+        "Ministerie van Binnenlandse Zaken"
+      ],
+      "eng": [
+        "Ministerie van Binnenlandse Zaken"
+      ]
+    },
+    "buyer-country": [
+      "NLD"
+    ],
+    "place-of-performance": [
+      "NL332"
+    ],
+    "classification-cpv": [
+      "72224000",
+      "79411000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-09+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 533400,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Consultancy services for digital administration transformation. The contracting authority Ministerie van Binnenlandse Zaken invites tenders for a contract with an estimated volume of 533,400 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Beratungsleistungen digitale Verwaltung. Der Auftraggeber Ministerie van Binnenlandse Zaken schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 533.400 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "404384-2026",
+    "notice-title": {
+      "eng": [
+        "SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "cn-standard",
+    "publication-date": "2026-08-30Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-10+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 1332000,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. The contracting authority Région Auvergne-Rhône-Alpes invites tenders for a contract with an estimated volume of 1,332,000 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "SAP S/4HANA Migrationsunterstützung. Der Auftraggeber Région Auvergne-Rhône-Alpes schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 1.332.000 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "404521-2026",
+    "notice-title": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "cn-social",
+    "publication-date": "2026-08-29Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-11+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 566100,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. The contracting authority Comune di Milano invites tenders for a contract with an estimated volume of 566,100 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Wartung Netzwerkinfrastruktur und WLAN. Der Auftraggeber Comune di Milano schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 566.100 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "404658-2026",
+    "notice-title": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "pin-only",
+    "publication-date": "2026-08-28Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-12+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 125800,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). The contracting authority Universitätsklinikum Freiburg invites tenders for a contract with an estimated volume of 125,800 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Barrierefreiheits-Audit kommunaler Websites. Der Auftraggeber Universitätsklinikum Freiburg schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 125.800 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "404795-2026",
+    "notice-title": {
+      "eng": [
+        "Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "cn-desg",
+    "publication-date": "2026-08-27Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "deadline-receipt-tender-date-lot": [
+      "2026-10-13+02:00"
+    ],
+    "total-value": [
+      {
+        "amount": 137750,
+        "currency": "EUR"
+      }
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. The contracting authority Deutsche Rentenversicherung Bund invites tenders for a contract with an estimated volume of 137,750 EUR. Services are to be delivered on site and remotely; the framework runs for 48 months with an option to extend. Tenderers must demonstrate at least three comparable public-sector references."
+      ],
+      "deu": [
+        "Schulungsleistungen IT-Grundschutz. Der Auftraggeber Deutsche Rentenversicherung Bund schreibt einen Rahmenvertrag mit einem geschätzten Volumen von 137.750 EUR aus."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900097-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: Framework agreement for custom software development and DevOps services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-09-04Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ],
+      "eng": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1000"
+    ],
+    "place-of-performance": [
+      "DE144"
+    ],
+    "classification-cpv": [
+      "72212000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 1800000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Materna Information & Communications SE"
+      ],
+      "deu": [
+        "Materna Information & Communications SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300000000"
+    ],
+    "description-lot": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services. Stadt Ulm, Zentrale Vergabestelle awarded this contract to Materna Information & Communications SE with a total value of 1,800,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900194-2021",
+    "notice-title": {
+      "eng": [
+        "Contract award: Framework agreement for custom software development and DevOps services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2021-09-04Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ],
+      "eng": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1000"
+    ],
+    "place-of-performance": [
+      "DE144"
+    ],
+    "classification-cpv": [
+      "72212000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 1968000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Atos Information Technology GmbH"
+      ],
+      "deu": [
+        "Atos Information Technology GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300000000"
+    ],
+    "description-lot": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services. Stadt Ulm, Zentrale Vergabestelle awarded this contract to Atos Information Technology GmbH with a total value of 1,968,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900291-2018",
+    "notice-title": {
+      "eng": [
+        "Contract award: Framework agreement for custom software development and DevOps services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Rahmenvertrag Softwareentwicklung und DevOps-Dienstleistungen"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2018-09-04Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ],
+      "eng": [
+        "Stadt Ulm, Zentrale Vergabestelle"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1000"
+    ],
+    "place-of-performance": [
+      "DE144"
+    ],
+    "classification-cpv": [
+      "72212000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 2136000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Atos Information Technology GmbH"
+      ],
+      "deu": [
+        "Atos Information Technology GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300000000"
+    ],
+    "description-lot": {
+      "eng": [
+        "Framework agreement for custom software development and DevOps services. Stadt Ulm, Zentrale Vergabestelle awarded this contract to Atos Information Technology GmbH with a total value of 2,136,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900388-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: Procurement of a document management system including migration"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Beschaffung einer Dokumentenmanagement-Lösung (DMS)"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-02-07Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ],
+      "eng": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1001"
+    ],
+    "place-of-performance": [
+      "DEA22"
+    ],
+    "classification-cpv": [
+      "48311000",
+      "48000000"
+    ],
+    "total-value": [
+      {
+        "amount": 686400,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300007919"
+    ],
+    "description-lot": {
+      "eng": [
+        "Procurement of a document management system including migration. Bundesamt für Sicherheit in der Informationstechnik awarded this contract to msg systems ag with a total value of 686,400 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900485-2020",
+    "notice-title": {
+      "eng": [
+        "Contract award: Procurement of a document management system including migration"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Beschaffung einer Dokumentenmanagement-Lösung (DMS)"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2020-02-07Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ],
+      "eng": [
+        "Bundesamt für Sicherheit in der Informationstechnik"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1001"
+    ],
+    "place-of-performance": [
+      "DEA22"
+    ],
+    "classification-cpv": [
+      "48311000",
+      "48000000"
+    ],
+    "total-value": [
+      {
+        "amount": 741000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300007919"
+    ],
+    "description-lot": {
+      "eng": [
+        "Procurement of a document management system including migration. Bundesamt für Sicherheit in der Informationstechnik awarded this contract to msg systems ag with a total value of 741,000 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900582-2026",
+    "notice-title": {
+      "eng": [
+        "Contract award: IT security audit and penetration testing services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: IT-Sicherheitsaudit und Penetrationstests"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2026-07-10Z",
+    "buyer-name": {
+      "deu": [
+        "Landeshauptstadt Stuttgart"
+      ],
+      "eng": [
+        "Landeshauptstadt Stuttgart"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1002"
+    ],
+    "place-of-performance": [
+      "DE111"
+    ],
+    "classification-cpv": [
+      "72500000",
+      "79212000"
+    ],
+    "total-value": [
+      {
+        "amount": 191900,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Capgemini Deutschland GmbH"
+      ],
+      "deu": [
+        "Capgemini Deutschland GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300015838"
+    ],
+    "description-lot": {
+      "eng": [
+        "IT security audit and penetration testing services. Landeshauptstadt Stuttgart awarded this contract to Capgemini Deutschland GmbH with a total value of 191,900 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900679-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: IT security audit and penetration testing services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: IT-Sicherheitsaudit und Penetrationstests"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-07-10Z",
+    "buyer-name": {
+      "deu": [
+        "Landeshauptstadt Stuttgart"
+      ],
+      "eng": [
+        "Landeshauptstadt Stuttgart"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1002"
+    ],
+    "place-of-performance": [
+      "DE111"
+    ],
+    "classification-cpv": [
+      "72500000",
+      "79212000"
+    ],
+    "total-value": [
+      {
+        "amount": 205200,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Capgemini Deutschland GmbH"
+      ],
+      "deu": [
+        "Capgemini Deutschland GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300015838"
+    ],
+    "description-lot": {
+      "eng": [
+        "IT security audit and penetration testing services. Landeshauptstadt Stuttgart awarded this contract to Capgemini Deutschland GmbH with a total value of 205,200 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900776-2022",
+    "notice-title": {
+      "eng": [
+        "Contract award: IT security audit and penetration testing services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: IT-Sicherheitsaudit und Penetrationstests"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2022-07-10Z",
+    "buyer-name": {
+      "deu": [
+        "Landeshauptstadt Stuttgart"
+      ],
+      "eng": [
+        "Landeshauptstadt Stuttgart"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1002"
+    ],
+    "place-of-performance": [
+      "DE111"
+    ],
+    "classification-cpv": [
+      "72500000",
+      "79212000"
+    ],
+    "total-value": [
+      {
+        "amount": 218500,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Capgemini Deutschland GmbH"
+      ],
+      "deu": [
+        "Capgemini Deutschland GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300015838"
+    ],
+    "description-lot": {
+      "eng": [
+        "IT security audit and penetration testing services. Landeshauptstadt Stuttgart awarded this contract to Capgemini Deutschland GmbH with a total value of 218,500 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900873-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: Operation and maintenance of the municipal cloud platform"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Betrieb und Wartung der kommunalen Cloud-Plattform"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-04-13Z",
+    "buyer-name": {
+      "deu": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ],
+      "eng": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1003"
+    ],
+    "place-of-performance": [
+      "DE600"
+    ],
+    "classification-cpv": [
+      "72514000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 3534000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Atos Information Technology GmbH"
+      ],
+      "deu": [
+        "Atos Information Technology GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300023757"
+    ],
+    "description-lot": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform. Freie und Hansestadt Hamburg, Finanzbehörde awarded this contract to Atos Information Technology GmbH with a total value of 3,534,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "900970-2021",
+    "notice-title": {
+      "eng": [
+        "Contract award: Operation and maintenance of the municipal cloud platform"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Betrieb und Wartung der kommunalen Cloud-Plattform"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2021-04-13Z",
+    "buyer-name": {
+      "deu": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ],
+      "eng": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1003"
+    ],
+    "place-of-performance": [
+      "DE600"
+    ],
+    "classification-cpv": [
+      "72514000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 3751000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Atos Information Technology GmbH"
+      ],
+      "deu": [
+        "Atos Information Technology GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300023757"
+    ],
+    "description-lot": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform. Freie und Hansestadt Hamburg, Finanzbehörde awarded this contract to Atos Information Technology GmbH with a total value of 3,751,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901067-2018",
+    "notice-title": {
+      "eng": [
+        "Contract award: Operation and maintenance of the municipal cloud platform"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Betrieb und Wartung der kommunalen Cloud-Plattform"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2018-04-13Z",
+    "buyer-name": {
+      "deu": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ],
+      "eng": [
+        "Freie und Hansestadt Hamburg, Finanzbehörde"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1003"
+    ],
+    "place-of-performance": [
+      "DE600"
+    ],
+    "classification-cpv": [
+      "72514000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 2418000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Atos Information Technology GmbH"
+      ],
+      "deu": [
+        "Atos Information Technology GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300023757"
+    ],
+    "description-lot": {
+      "eng": [
+        "Operation and maintenance of the municipal cloud platform. Freie und Hansestadt Hamburg, Finanzbehörde awarded this contract to Atos Information Technology GmbH with a total value of 2,418,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901164-2023",
+    "notice-title": {
+      "eng": [
+        "Contract award: Development of an online citizen services portal"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Entwicklung eines Onlineportals für Bürgerdienste"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2023-05-16Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesrechenzentrum GmbH"
+      ],
+      "eng": [
+        "Bundesrechenzentrum GmbH"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "buyer-identifier": [
+      "ORG-1004"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "72212000"
+    ],
+    "total-value": [
+      {
+        "amount": 492800,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Accenture GmbH"
+      ],
+      "deu": [
+        "Accenture GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300031676"
+    ],
+    "description-lot": {
+      "eng": [
+        "Development of an online citizen services portal. Bundesrechenzentrum GmbH awarded this contract to Accenture GmbH with a total value of 492,800 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901261-2019",
+    "notice-title": {
+      "eng": [
+        "Contract award: Development of an online citizen services portal"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Entwicklung eines Onlineportals für Bürgerdienste"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2019-05-16Z",
+    "buyer-name": {
+      "deu": [
+        "Bundesrechenzentrum GmbH"
+      ],
+      "eng": [
+        "Bundesrechenzentrum GmbH"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "buyer-identifier": [
+      "ORG-1004"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "72212000"
+    ],
+    "total-value": [
+      {
+        "amount": 537600,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Adesso SE"
+      ],
+      "deu": [
+        "Adesso SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300031676"
+    ],
+    "description-lot": {
+      "eng": [
+        "Development of an online citizen services portal. Bundesrechenzentrum GmbH awarded this contract to Adesso SE with a total value of 537,600 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901358-2026",
+    "notice-title": {
+      "eng": [
+        "Contract award: Supply of notebooks and peripheral devices"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Lieferung von Notebooks und Peripheriegeräten"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2026-03-19Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ],
+      "eng": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "buyer-identifier": [
+      "ORG-1005"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "30213100",
+      "30230000"
+    ],
+    "total-value": [
+      {
+        "amount": 1125000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Bechtle AG"
+      ],
+      "deu": [
+        "Bechtle AG"
+      ]
+    },
+    "winner-identifier": [
+      "DE300039595"
+    ],
+    "description-lot": {
+      "eng": [
+        "Supply of notebooks and peripheral devices. Stadt Wien - Magistratsabteilung 01 awarded this contract to Bechtle AG with a total value of 1,125,000 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901455-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: Supply of notebooks and peripheral devices"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Lieferung von Notebooks und Peripheriegeräten"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-03-19Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ],
+      "eng": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "buyer-identifier": [
+      "ORG-1005"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "30213100",
+      "30230000"
+    ],
+    "total-value": [
+      {
+        "amount": 1212500,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Bechtle AG"
+      ],
+      "deu": [
+        "Bechtle AG"
+      ]
+    },
+    "winner-identifier": [
+      "DE300039595"
+    ],
+    "description-lot": {
+      "eng": [
+        "Supply of notebooks and peripheral devices. Stadt Wien - Magistratsabteilung 01 awarded this contract to Bechtle AG with a total value of 1,212,500 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901552-2022",
+    "notice-title": {
+      "eng": [
+        "Contract award: Supply of notebooks and peripheral devices"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Lieferung von Notebooks und Peripheriegeräten"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2022-03-19Z",
+    "buyer-name": {
+      "deu": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ],
+      "eng": [
+        "Stadt Wien - Magistratsabteilung 01"
+      ]
+    },
+    "buyer-country": [
+      "AUT"
+    ],
+    "buyer-identifier": [
+      "ORG-1005"
+    ],
+    "place-of-performance": [
+      "AT130"
+    ],
+    "classification-cpv": [
+      "30213100",
+      "30230000"
+    ],
+    "total-value": [
+      {
+        "amount": 1300000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Bechtle AG"
+      ],
+      "deu": [
+        "Bechtle AG"
+      ]
+    },
+    "winner-identifier": [
+      "DE300039595"
+    ],
+    "description-lot": {
+      "eng": [
+        "Supply of notebooks and peripheral devices. Stadt Wien - Magistratsabteilung 01 awarded this contract to Bechtle AG with a total value of 1,300,000 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901649-2025",
+    "notice-title": {
+      "eng": [
+        "Contract award: Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2025-08-22Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "buyer-identifier": [
+      "ORG-1006"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "total-value": [
+      {
+        "amount": 978500,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "T-Systems International GmbH"
+      ],
+      "deu": [
+        "T-Systems International GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300047514"
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. Kanton Zürich, Amt für Informatik awarded this contract to T-Systems International GmbH with a total value of 978,500 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901746-2022",
+    "notice-title": {
+      "eng": [
+        "Contract award: Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2022-08-22Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "buyer-identifier": [
+      "ORG-1006"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "total-value": [
+      {
+        "amount": 1045000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "T-Systems International GmbH"
+      ],
+      "deu": [
+        "T-Systems International GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300047514"
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. Kanton Zürich, Amt für Informatik awarded this contract to T-Systems International GmbH with a total value of 1,045,000 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901843-2019",
+    "notice-title": {
+      "eng": [
+        "Contract award: Data warehouse modernisation and analytics services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Data-Warehouse-Modernisierung und Analytics"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2019-08-22Z",
+    "buyer-name": {
+      "deu": [
+        "Kanton Zürich, Amt für Informatik"
+      ],
+      "eng": [
+        "Kanton Zürich, Amt für Informatik"
+      ]
+    },
+    "buyer-country": [
+      "CHE"
+    ],
+    "buyer-identifier": [
+      "ORG-1006"
+    ],
+    "place-of-performance": [
+      "CH040"
+    ],
+    "classification-cpv": [
+      "72316000",
+      "72322000"
+    ],
+    "total-value": [
+      {
+        "amount": 1111500,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "T-Systems International GmbH"
+      ],
+      "deu": [
+        "T-Systems International GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300047514"
+    ],
+    "description-lot": {
+      "eng": [
+        "Data warehouse modernisation and analytics services. Kanton Zürich, Amt für Informatik awarded this contract to T-Systems International GmbH with a total value of 1,111,500 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "901940-2023",
+    "notice-title": {
+      "eng": [
+        "Contract award: Consultancy services for digital administration transformation"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Beratungsleistungen digitale Verwaltung"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2023-05-25Z",
+    "buyer-name": {
+      "deu": [
+        "Ministerie van Binnenlandse Zaken"
+      ],
+      "eng": [
+        "Ministerie van Binnenlandse Zaken"
+      ]
+    },
+    "buyer-country": [
+      "NLD"
+    ],
+    "buyer-identifier": [
+      "ORG-1007"
+    ],
+    "place-of-performance": [
+      "NL332"
+    ],
+    "classification-cpv": [
+      "72224000",
+      "79411000"
+    ],
+    "total-value": [
+      {
+        "amount": 487200,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Adesso SE"
+      ],
+      "deu": [
+        "Adesso SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300055433"
+    ],
+    "description-lot": {
+      "eng": [
+        "Consultancy services for digital administration transformation. Ministerie van Binnenlandse Zaken awarded this contract to Adesso SE with a total value of 487,200 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902037-2019",
+    "notice-title": {
+      "eng": [
+        "Contract award: Consultancy services for digital administration transformation"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Beratungsleistungen digitale Verwaltung"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2019-05-25Z",
+    "buyer-name": {
+      "deu": [
+        "Ministerie van Binnenlandse Zaken"
+      ],
+      "eng": [
+        "Ministerie van Binnenlandse Zaken"
+      ]
+    },
+    "buyer-country": [
+      "NLD"
+    ],
+    "buyer-identifier": [
+      "ORG-1007"
+    ],
+    "place-of-performance": [
+      "NL332"
+    ],
+    "classification-cpv": [
+      "72224000",
+      "79411000"
+    ],
+    "total-value": [
+      {
+        "amount": 516600,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Adesso SE"
+      ],
+      "deu": [
+        "Adesso SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300055433"
+    ],
+    "description-lot": {
+      "eng": [
+        "Consultancy services for digital administration transformation. Ministerie van Binnenlandse Zaken awarded this contract to Adesso SE with a total value of 516,600 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902134-2025",
+    "notice-title": {
+      "eng": [
+        "Contract award: SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2025-06-06Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "buyer-identifier": [
+      "ORG-1008"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 1422000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "PwC Strategy& Deutschland GmbH"
+      ],
+      "deu": [
+        "PwC Strategy& Deutschland GmbH"
+      ]
+    },
+    "winner-identifier": [
+      "DE300063352"
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. Région Auvergne-Rhône-Alpes awarded this contract to PwC Strategy& Deutschland GmbH with a total value of 1,422,000 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902231-2023",
+    "notice-title": {
+      "eng": [
+        "Contract award: SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2023-06-06Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "buyer-identifier": [
+      "ORG-1008"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 1548000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300063352"
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. Région Auvergne-Rhône-Alpes awarded this contract to msg systems ag with a total value of 1,548,000 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902328-2021",
+    "notice-title": {
+      "eng": [
+        "Contract award: SAP S/4HANA migration support services"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: SAP S/4HANA Migrationsunterstützung"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2021-06-06Z",
+    "buyer-name": {
+      "deu": [
+        "Région Auvergne-Rhône-Alpes"
+      ],
+      "eng": [
+        "Région Auvergne-Rhône-Alpes"
+      ]
+    },
+    "buyer-country": [
+      "FRA"
+    ],
+    "buyer-identifier": [
+      "ORG-1008"
+    ],
+    "place-of-performance": [
+      "FRK2"
+    ],
+    "classification-cpv": [
+      "72265000",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 1674000,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300063352"
+    ],
+    "description-lot": {
+      "eng": [
+        "SAP S/4HANA migration support services. Région Auvergne-Rhône-Alpes awarded this contract to msg systems ag with a total value of 1,674,000 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902425-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-11-09Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "buyer-identifier": [
+      "ORG-1009"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "total-value": [
+      {
+        "amount": 469200,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Computacenter AG & Co. oHG"
+      ],
+      "deu": [
+        "Computacenter AG & Co. oHG"
+      ]
+    },
+    "winner-identifier": [
+      "DE300071271"
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. Comune di Milano awarded this contract to Computacenter AG & Co. oHG with a total value of 469,200 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902522-2021",
+    "notice-title": {
+      "eng": [
+        "Contract award: Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2021-11-09Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "buyer-identifier": [
+      "ORG-1009"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "total-value": [
+      {
+        "amount": 504900,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Computacenter AG & Co. oHG"
+      ],
+      "deu": [
+        "Computacenter AG & Co. oHG"
+      ]
+    },
+    "winner-identifier": [
+      "DE300071271"
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. Comune di Milano awarded this contract to Computacenter AG & Co. oHG with a total value of 504,900 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902619-2018",
+    "notice-title": {
+      "eng": [
+        "Contract award: Maintenance of network infrastructure and campus WLAN"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Wartung Netzwerkinfrastruktur und WLAN"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2018-11-09Z",
+    "buyer-name": {
+      "deu": [
+        "Comune di Milano"
+      ],
+      "eng": [
+        "Comune di Milano"
+      ]
+    },
+    "buyer-country": [
+      "ITA"
+    ],
+    "buyer-identifier": [
+      "ORG-1009"
+    ],
+    "place-of-performance": [
+      "ITC4a"
+    ],
+    "classification-cpv": [
+      "72315000",
+      "32400000"
+    ],
+    "total-value": [
+      {
+        "amount": 540600,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Computacenter AG & Co. oHG"
+      ],
+      "deu": [
+        "Computacenter AG & Co. oHG"
+      ]
+    },
+    "winner-identifier": [
+      "DE300071271"
+    ],
+    "description-lot": {
+      "eng": [
+        "Maintenance of network infrastructure and campus WLAN. Comune di Milano awarded this contract to Computacenter AG & Co. oHG with a total value of 540,600 EUR. The framework runs for 36 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902716-2024",
+    "notice-title": {
+      "eng": [
+        "Contract award: Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2024-09-12Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1010"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "total-value": [
+      {
+        "amount": 89250,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Materna Information & Communications SE"
+      ],
+      "deu": [
+        "Materna Information & Communications SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300079190"
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). Universitätsklinikum Freiburg awarded this contract to Materna Information & Communications SE with a total value of 89,250 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902813-2020",
+    "notice-title": {
+      "eng": [
+        "Contract award: Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2020-09-12Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1010"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "total-value": [
+      {
+        "amount": 95200,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Materna Information & Communications SE"
+      ],
+      "deu": [
+        "Materna Information & Communications SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300079190"
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). Universitätsklinikum Freiburg awarded this contract to Materna Information & Communications SE with a total value of 95,200 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "902910-2016",
+    "notice-title": {
+      "eng": [
+        "Contract award: Accessibility audit of municipal websites (WCAG 2.2)"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Barrierefreiheits-Audit kommunaler Websites"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2016-09-12Z",
+    "buyer-name": {
+      "deu": [
+        "Universitätsklinikum Freiburg"
+      ],
+      "eng": [
+        "Universitätsklinikum Freiburg"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1010"
+    ],
+    "place-of-performance": [
+      "DE131"
+    ],
+    "classification-cpv": [
+      "72413000",
+      "79417000"
+    ],
+    "total-value": [
+      {
+        "amount": 101150,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "Materna Information & Communications SE"
+      ],
+      "deu": [
+        "Materna Information & Communications SE"
+      ]
+    },
+    "winner-identifier": [
+      "DE300079190"
+    ],
+    "description-lot": {
+      "eng": [
+        "Accessibility audit of municipal websites (WCAG 2.2). Universitätsklinikum Freiburg awarded this contract to Materna Information & Communications SE with a total value of 101,150 EUR. The framework runs for 48 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "903007-2025",
+    "notice-title": {
+      "eng": [
+        "Contract award: Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2025-06-15Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1011"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 171100,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300087109"
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. Deutsche Rentenversicherung Bund awarded this contract to msg systems ag with a total value of 171,100 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "903104-2023",
+    "notice-title": {
+      "eng": [
+        "Contract award: Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2023-06-15Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1011"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 108750,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300087109"
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. Deutsche Rentenversicherung Bund awarded this contract to msg systems ag with a total value of 108,750 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  },
+  {
+    "publication-number": "903201-2021",
+    "notice-title": {
+      "eng": [
+        "Contract award: Training services for IT baseline protection"
+      ],
+      "deu": [
+        "Vergabebekanntmachung: Schulungsleistungen IT-Grundschutz"
+      ]
+    },
+    "notice-type": "can-standard",
+    "publication-date": "2021-06-15Z",
+    "buyer-name": {
+      "deu": [
+        "Deutsche Rentenversicherung Bund"
+      ],
+      "eng": [
+        "Deutsche Rentenversicherung Bund"
+      ]
+    },
+    "buyer-country": [
+      "DEU"
+    ],
+    "buyer-identifier": [
+      "ORG-1011"
+    ],
+    "place-of-performance": [
+      "DE300"
+    ],
+    "classification-cpv": [
+      "80533100",
+      "72000000"
+    ],
+    "total-value": [
+      {
+        "amount": 118900,
+        "currency": "EUR"
+      }
+    ],
+    "winner-name": {
+      "eng": [
+        "msg systems ag"
+      ],
+      "deu": [
+        "msg systems ag"
+      ]
+    },
+    "winner-identifier": [
+      "DE300087109"
+    ],
+    "description-lot": {
+      "eng": [
+        "Training services for IT baseline protection. Deutsche Rentenversicherung Bund awarded this contract to msg systems ag with a total value of 118,900 EUR. The framework runs for 24 months."
+      ]
+    },
+    "notice-language": [
+      "deu"
+    ]
+  }
+]
