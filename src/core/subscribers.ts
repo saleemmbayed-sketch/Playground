@@ -128,8 +128,12 @@ function audience(where: string, requireConfirmed: boolean): Array<Subscriber & 
     .prepare(
       `SELECT s.*, p.* FROM subscribers s
        JOIN profiles p ON p.subscriber_id = s.id
-       LEFT JOIN suppressions sup ON sup.email = s.email
-       WHERE ${where} ${confirmGate} AND sup.email IS NULL`,
+      LEFT JOIN suppressions sup ON sup.email = s.email
+      WHERE ${where} ${confirmGate} AND sup.email IS NULL
+      -- Least-recently-mailed first. When the per-run send cap is hit, the
+      -- subscribers who already got a recent digest are the ones deferred, so a
+      -- fixed subset at the tail of the list can never be starved forever.
+      ORDER BY COALESCE(s.last_digest_at, '0000-00-00T00:00:00.000Z') ASC, s.id ASC`,
     )
     .all() as unknown as Array<Subscriber & Profile>;
   return rows.map((r) => ({ ...(r as any), profile: r as unknown as Profile }));

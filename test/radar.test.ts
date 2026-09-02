@@ -24,7 +24,7 @@ process.env.LEGAL_ADDRESS = 'Teststr. 1, 89073 Ulm';
 
 const {
   addMonths, cpvFamily, computeForecasts, daysUntilWindow, findSupersedingNotice,
-  forecastFromAwards, forecastStatus, listForecasts, monthsBetween, refreshRadar, slugify,
+  forecastFromAwards, forecastStatus, listForecasts, monthsBetween, radarStats, refreshRadar, slugify,
 } = await import('../src/core/radar.ts');
 type AwardRecord = Parameters<typeof forecastFromAwards>[0][number];
 const { buyerProfile, listBuyers, supplierShare } = await import('../src/core/intel.ts');
@@ -284,6 +284,25 @@ test('an unrelated notice in the same sector does not supersede a forecast', () 
     })!,
   ]);
   assert.equal(findSupersedingNotice(f), 'relet-2027');
+});
+
+test('radarStats measures hit rate from real published notices, with no marketing gloss', () => {
+  // An old award whose window has already passed and was never re-tendered.
+  upsertNotices([
+    awardNotice({ id: 'old-2015', buyer: 'Stadt Altstadt', date: '2015-01-15', cpv: '72514000', winner: 'Historic GmbH', value: 500_000, org: 'ORG-OLD' }),
+  ]);
+  refreshRadar({ today: TODAY });
+
+  const stats = radarStats({ today: TODAY });
+  assert.ok(stats.total > 0);
+  assert.ok(stats.superseded >= 1, 'the relet-2027 notice should confirm the Testheim forecast');
+  assert.ok(stats.missed >= 1, 'the long-expired Altstadt window counts as a miss, not a success');
+  // A real, inspectable number — never just "high confidence" in the marketing.
+  assert.ok(
+    stats.hitRatePct != null && stats.hitRatePct >= 0 && stats.hitRatePct <= 100,
+    `hit rate must be a percentage, got ${stats.hitRatePct}`,
+  );
+  assert.ok(stats.open + stats.superseded + stats.missed === stats.total, 'partition is complete');
 });
 
 /* ------------------------------------------------------------ intelligence */

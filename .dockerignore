@@ -1,0 +1,20 @@
+# Keep secrets and local runtime state out of the Docker build context.
+# The image gets its config from env_file at runtime (docker-compose.yml), never
+# baked in — but even the context should not contain them.
+.env
+.env.*
+!.env.example
+node_modules
+dist
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/outbox
+data/backups
+*.log
+.git
+.gitignore
+AUDIT.md
+test
+scripts
+ci

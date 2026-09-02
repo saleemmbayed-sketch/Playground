@@ -120,7 +120,7 @@ src/
                          + radar digest, built-in scheduler
   web/views.ts           server-rendered pages, no JS framework, no build step for the frontend
   web/ratelimit.ts       in-memory rate limiting for public forms
-test/                    103 tests: normaliser, money parsing, matcher, tokens, dedupe,
+test/                    108 tests: normaliser, money parsing, matcher, tokens, dedupe,
                          opt-in gating, suppression, backups, every HTTP route,
                          signature-verified Stripe webhooks, the full forecasting engine
                          (cycle detection, confidence, paywall redaction), and red-team
@@ -196,8 +196,11 @@ emails to `data/outbox/*.eml` so you can read exactly what a subscriber receives
 Useful commands:
 
 ```bash
-npm test                     # 57 tests, no network required
+npm test                     # 108 tests, no network required
 npm run typecheck            # strict TypeScript
+npm run preflight            # executable "ready to launch" gate: env, deps, build, typecheck,
+                             # tests, production doctor, live TED; exits non-zero on any blocker.
+                             # Add `-- --full` to also run both UAT harnesses against the built server.
 npm run setup                # interactive wizard: writes a complete .env, generates APP_SECRET
 npm run cli -- setup-stripe  # creates product, price, webhook and portal; writes IDs into .env
 npm run cli -- doctor        # pre-launch readiness check
@@ -217,6 +220,26 @@ Admin dashboard: `http://localhost:3000/admin?key=$APP_SECRET`.
 
 > The step-by-step version with tick boxes is in **[LAUNCH.md](LAUNCH.md)**.
 > Run `npm run cli -- doctor` to have the machine check its own readiness.
+
+### Definition of Ready (the real one)
+
+A box is **launch-ready** when `npm run preflight -- --full` exits `0` **and** `PREFLIGHT.md`
+shows no `✅`-check under "Blocking". That means, mechanically:
+
+1. Node ≥ 22, deps installed, `dist/` built.
+2. `npm run typecheck` passes.
+3. **All 108 tests pass**.
+4. **Both UAT harnesses pass against the built server** — 50 lifecycle + 98 black-box
+   (this runs the deployed artifact, not the source).
+5. `doctor` in `NODE_ENV=production` has **zero blocking issues**, which by construction
+   means: `BASE_URL` is `https`, `MAIL_TRANSPORT=smtp` with a usable `SMTP_URL`, Stripe is
+   configured with a webhook secret, `TED_OFFLINE=false`, a real `APP_SECRET` and Impressum
+   details are present.
+6. Live TED is verified (`source=ted`) — enforced with `PREFLIGHT_REQUIRE_LIVE=1` on the VPS.
+
+Items still left under "Operator actions" are *your* decisions/accounts (DNS/SPF/DKIM, legal,
+Stripe test-mode E2E, first customers) — not code. **"Ready to launch" means the code gate is
+green; it never means "money is guaranteed."** Revenue starts with distribution.
 
 1. **Domain** (~€10/yr). Point an A record at your VPS.
 2. **VPS** — Hetzner CX22 ≈ €4/mo (Nuremberg/Falkenstein keeps you in EU data residency).
@@ -300,6 +323,11 @@ demonstrated against a running instance, fixed, and pinned with a regression tes
 | **Upgrade path** | New indexes were declared in `SCHEMA`, which runs *before* column migrations — startup crashed on any pre-existing database. Legacy `can-*` rows also stayed `is_award = 0`, so years of archived awards were invisible to the forecaster. | Indexes moved after migrations; `is_award` and `buyer_slug` are backfilled on boot. |
 | **Performance** | Each buyer page ran a `GROUP BY` over every award notice to find one buyer — 16.8 ms at 8k awards, growing linearly, on precisely the pages crawlers hammer. | Indexed `buyer_slug` column: **0.23 ms** (73×) and constant in corpus size. Sitemap is cached for 15 minutes. |
 | **Legal** | Winning "suppliers" can be sole traders, i.e. personal data, and the site publishes predictions about named firms. | Basis and removal route documented on `/legal`, with a notice on every buyer and radar page. |
+| **Deliverability fairness** | With > `MAIL_MAX_PER_RUN` subscribers, a fixed ordering could starve the tail of the list: the cap `skipped` them, nothing was recorded, and the same head got the slots every day. | Audience is now ordered **least-recently-mailed first**, so a deferred subscriber is retried before anyone already mailed. Deferrals are counted as `capped` (distinct from `failed` and `skipped`) and reported on `/healthz` and `/admin`. |
+| **Dependency security** | `nodemailer@7` shipped multiple high-severity advisories (SMTP/header injection, message SSRF, OAuth2 TLS bypass). | Upgraded to `nodemailer@9.1.1`; `npm audit` = **0 vulnerabilities**; tests and both UATs still green. |
+| **Build hygiene** | No `.dockerignore`, so a build context could contain `.env`, `node_modules`, `dist/` and runtime DBs. | Added `.dockerignore` excluding secrets and state; the image only gets config via `env_file` at runtime. |
+| **Launch readiness** | "Ready" was prose; a box could say "Ready to launch" in production while emailing nobody, charging nobody, and ingesting fixtures. | `npm run preflight -- --full` is the executable gate: env/deps/build/typecheck/108 tests + both UATs against the built server + production `doctor` + live-TED attempt → `PREFLIGHT.md` and a non-zero exit on any blocker. |
+| **Honest upsell** | The €79 Radar claim ("6–12 months before publication") had no self-measurement; it rested on plausibility. | `/healthz` and `/admin` now expose a **Radar hit rate** computed from `superseded_by` (confirmed re-let) vs. a window that closed without one — the model measures its own accuracy from the same public feed, for free. |
 
 ---
 

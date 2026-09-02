@@ -3,8 +3,17 @@
 Work top to bottom. Anything marked **BLOCKER** must be done before you send a single
 email to a real person. Total time: one focused evening. Total cost: ~€6/month.
 
-Run `npm run cli -- doctor` at any point — it mechanically checks most of section 2 and
-exits non-zero if something would break in production.
+The machine-checkable part is now a single command:
+```bash
+npm run preflight -- --full
+```
+It installs deps, builds `dist/`, typechecks, runs all 108 tests, runs both UAT harnesses
+(50 lifecycle + 98 black-box against the built server), runs the production `doctor`, and
+attempts the live TED smoke test. It exits non-zero and writes `PREFLIGHT.md` listing
+exactly what is still blocking, which is why "ready to launch" is now a gate, not a vibe.
+
+Run `npm run cli -- doctor` any time — it checks most of section 2 and exits non-zero if
+something would break in production.
 
 ---
 
