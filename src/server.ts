@@ -15,7 +15,7 @@ import {
   createCheckoutSession, createPortalSession, edgeEnabled, handleWebhook, hasRadarAccess,
   stripeEnabled, type Tier,
 } from './core/billing.js';
-import { listForecasts, showcaseForecastIds } from './core/radar.js';
+import { listForecasts, radarStats, showcaseForecastIds } from './core/radar.js';
 import { buyerProfile, listBuyers } from './core/intel.js';
 import {
   runAwardIngest, runBackup, runDailyDigest, runIngest, runPrune, runRadarDigest,
@@ -841,10 +841,18 @@ export function buildServer() {
       if (ageHours > staleAfterHours) problems.push(`last ingest was ${Math.round(ageHours)}h ago`);
       if (lastIngest.ok === 0) problems.push('last ingest failed');
     }
+    let capped = 0;
     for (const j of jobs) {
       if (j.ok === 0) problems.push(`${j.job} failed`);
-      const failed = Number(JSON.parse(j.stats ?? '{}')?.failed ?? 0);
-      if (failed > 0) problems.push(`${j.job}: ${failed} recipient send failure(s)`);
+      if (j.stats) {
+        const st = JSON.parse(j.stats);
+        const failed = Number(st?.failed ?? 0);
+        if (failed > 0) problems.push(`${j.job}: ${failed} recipient send failure(s)`);
+        // Capped ≠ failed: it is congestion, not breakage, so it must not page the
+        // uptime monitor — but it must be visible, because it means someone was
+        // deferred. Fairness ordering retries them first on the next run.
+        capped += Number(st?.capped ?? 0);
+      }
     }
 
     const degraded = problems.length > 0;
@@ -856,6 +864,11 @@ export function buildServer() {
       ok: !degraded,
       degraded,
       problems: [...new Set(problems)],
+      // Deliverability backlog across recent runs (send-cap deferrals). Not part
+      // of `problems` — expected under load — but visible in the payload.
+      capped,
+      sendCapPerRun: config.mail.maxPerRun,
+      radar: radarStats(),
       notices: countNotices(),
       subscribers: subscriberStats(),
       stripe: stripeEnabled(),
@@ -880,7 +893,19 @@ export function buildServer() {
     const d = db();
     const subs = subscriberStats();
     const notices = noticeStats();
-    const mrr = subs.paying * (Number.parseFloat((config.billing.priceLabel.match(/[\d.]+/) ?? ['0'])[0]) || 0);
+    // The dashboard must be the truth. Pro and Edge have different prices, and a
+    // trialing subscriber hasn't paid yet, so MRR = active Pro × Pro + active Edge × Edge.
+    const priceOf = (label: string): number =>
+      Number.parseFloat((label.match(/[\d.]+/) ?? ['0'])[0]) || 0;
+    const prod = db().prepare(
+      `SELECT
+         COALESCE(SUM(CASE WHEN plan = 'edge' THEN 1 ELSE 0 END), 0) AS edge,
+         COALESCE(SUM(CASE WHEN plan = 'pro' THEN 1 ELSE 0 END), 0) AS pro
+       FROM subscribers WHERE status = 'active'`,
+    ).get() as { edge: number; pro: number };
+    const mrr = Number(prod.pro) * priceOf(config.billing.priceLabel)
+      + Number(prod.edge) * priceOf(config.billing.edgePriceLabel);
+    const radar = radarStats();
     const jobs = d
       .prepare('SELECT job, started_at, ended_at, ok, stats, error FROM job_runs ORDER BY id DESC LIMIT 15')
       .all() as any[];
@@ -906,6 +931,7 @@ export function buildServer() {
         <div class="card"><div class="stat">${subs.confirmed}</div><p>confirmed subscribers</p></div>
         <div class="card"><div class="stat">${subs.pending}</div><p>awaiting opt-in confirmation</p></div>
         <div class="card"><div class="stat">${notices.total.toLocaleString('en-GB')}</div><p>notices (${notices.last7} in 7d)</p></div>
+        <div class="card"><div class="stat">${radar.hitRatePct == null ? '—' : radar.hitRatePct.toLocaleString('en-GB') + '%'}</div><p>radar hit rate (${radar.superseded} hit${radar.superseded === 1 ? '' : 's'} / ${radar.missed} miss${radar.missed === 1 ? '' : 'ed'})</p></div>
         <div class="card"><div class="stat">${subs.suppressed}</div><p>suppressed addresses</p></div>
         <div class="card"><div class="stat">${config.mail.transport}</div><p>mail transport · stripe ${stripeEnabled() ? 'on' : 'off'}</p></div>
       </div>

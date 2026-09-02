@@ -333,6 +333,57 @@ test('billing portal is refused without a linked Stripe customer', async () => {
   assert.equal(res.statusCode, 403);
 });
 
+test('admin MRR counts Pro and Edge prices separately', async () => {
+  const { db } = await import('../src/core/db.ts');
+  const { updateProfile } = await import('../src/core/subscribers.ts');
+  // Two active Pro, one active Edge, one trialing (not yet paid).
+  for (const [email, plan] of [
+    ['mrr-pro@example.com', 'pro'], ['mrr-pro2@example.com', 'pro'], ['mrr-edge@example.com', 'edge'],
+  ] as const) {
+    const s = createSubscriber(email);
+    updateProfile(s.id, { cpv_prefixes: '72' });
+    setSubscriberStatus(s.id, { status: 'active', plan });
+  }
+  const trialing = createSubscriber('mrr-trial@example.com');
+  setSubscriberStatus(trialing.id, { status: 'trialing', plan: 'edge' });
+
+  const body = (await get('/admin?key=http-test-secret')).body;
+  const match = body.match(/€([\d,]+)<\/div><p>MRR/);
+  assert.ok(match, 'MRR figure is rendered');
+  const shown = Number(match![1].replace(/,/g, ''));
+  assert.equal(shown, 29 * 2 + 79, `expected €137 for 2 Pro + 1 Edge, got €${shown}`);
+  assert.match(body, /4 paying/, 'trialing counts as paying, active drives MRR');
+  db();
+});
+
+test('/healthz reports the send cap and any delivery backlog', async () => {
+  const { db } = await import('../src/core/db.ts');
+  const ids: number[] = [];
+  const pushJob = (stats: string) => {
+    const info = db().prepare(
+      "INSERT INTO job_runs (job, started_at, ended_at, ok, stats) VALUES ('digest.daily', datetime('now'), datetime('now'), 1, ?)",
+    ).run(stats);
+    ids.push(Number(info.lastInsertRowid));
+  };
+
+  // A capped run is not a failure: /healthz stays healthy and strict stays 200,
+  // but the backlog count is visible in the payload.
+  pushJob('{"failed":0,"capped":3}');
+  let body: any = JSON.parse((await get('/healthz')).body);
+  assert.equal(body.capped, 3, `expected 3 capped, got ${body.capped}`);
+  assert.equal(body.sendCapPerRun > 0, true);
+  const strict = await get('/healthz?strict=1');
+  assert.equal(strict.statusCode, 200, 'capped congestion must not page the uptime monitor');
+
+  // A genuine send failure still degrades.
+  pushJob('{"failed":1,"capped":0}');
+  body = JSON.parse((await get('/healthz')).body);
+  assert.equal(body.degraded, true);
+  assert.ok(body.problems.some((p: string) => /1 recipient send failure/.test(p)));
+
+  for (const id of ids) db().prepare('DELETE FROM job_runs WHERE id = ?').run(id);
+});
+
 test.after(async () => {
   await app.close();
   fs.rmSync(tmp, { recursive: true, force: true });

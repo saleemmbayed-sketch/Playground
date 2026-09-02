@@ -69,8 +69,10 @@ interface DigestStats {
   skippedEmpty: number;
   /** Real send failures (provider outage, refused recipient) — alert on this. */
   failed: number;
-  /** Expected skips: suppressed addresses or the per-run send cap. */
+  /** Expected skips: suppressed addresses. */
   skipped: number;
+  /** Hard cap reached: at least one recipient was deferred to the next run. */
+  capped: number;
 }
 
 /**
@@ -98,8 +100,18 @@ async function sendDigestSafely(
         subscriberId: sub.id, email: sub.email, error: r.failure.detail,
       });
       console.error(`[digest] recipient ${sub.email} failed: ${r.failure.detail}`);
-    } else if (r.failure) {
+    } else if (r.failure?.kind === 'capped') {
+      // Expected under load, but never silent: a capped subscriber was deferred
+      // and must be retried. Distinct from `failed` so it does not page the
+      // operator, and from `skipped` so the dashboard can see the congestion.
+      stats.capped += 1;
+      logEvent('digest.recipient.capped', {
+        subscriberId: sub.id, email: sub.email,
+      });
+    } else if (r.failure?.kind === 'suppressed') {
       stats.skipped += 1;
+    } else if (r.failure) {
+      stats.failed += 1;
     } else {
       stats.skippedEmpty += 1;
     }
@@ -116,7 +128,11 @@ async function sendDigestTo(
   profile: Profile,
   pool: ReturnType<typeof recentNotices>,
   opts: { limit: number; upsell: boolean; intro: string; period: string; skipIfEmpty: boolean },
-): Promise<{ sent: boolean; matches: number; failure?: { kind: string; detail: string } }> {
+): Promise<{ sent: boolean; matches: number; failure?: { kind: 'suppressed' | 'capped' | 'error'; detail: string; skipped: string } }> {
+  /* failure carries the mailer's own SendOutcome so `kind` and `skipped` stay the
+   * source of truth; `detail` mirrors `skipped` for log scanning convenience. */
+  const asFailure = (res: { kind: 'suppressed' | 'capped' | 'error'; skipped: string }) =>
+    ({ kind: res.kind, detail: res.skipped, skipped: res.skipped });
   const scored = matchNotices(pool, profile);
   const seen = alreadyDelivered(sub.id, scored.map((s) => s.notice.id));
   const fresh = scored.filter((s) => !seen.has(s.notice.id));
@@ -135,7 +151,7 @@ async function sendDigestTo(
     totalAvailable: Math.max(0, fresh.length - items.length),
   };
 
-  const res = await sendMail({
+    const res = await sendMail({
     to: sub.email,
     subject: digestSubject(items, opts.period),
     html: digestHtml(payload),
@@ -144,7 +160,9 @@ async function sendDigestTo(
   });
   if (!res.ok) {
     // A provider outage must be visible as a failure, not hidden as a quiet day.
-    return { sent: false, matches: 0, failure: { kind: res.kind, detail: res.skipped } };
+    // A hard cap is a deferral, not a failure: nothing was recorded as delivered,
+    // so the next run retries it first (least-recently-mailed ordering).
+    return { sent: false, matches: 0, failure: asFailure(res) };
   }
 
   // Record *all* fresh matches as delivered for paid daily sends so nothing repeats;
@@ -163,7 +181,7 @@ export async function runDailyDigest(opts: { lookbackDays?: number; dryRun?: boo
     const pool = recentNotices(daysAgoIso(opts.lookbackDays ?? 3));
     const subs = payingSubscribers().filter((s) => s.profile.cadence !== 'weekly');
     const stats: DigestStats = {
-      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0, failed: 0, skipped: 0,
+      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0, failed: 0, skipped: 0, capped: 0,
     };
 
     for (const s of subs) {
@@ -191,7 +209,7 @@ export async function runWeeklyDigest(opts: { dryRun?: boolean } = {}) {
       ...payingSubscribers().filter((s) => s.profile.cadence === 'weekly'),
     ];
     const stats: DigestStats = {
-      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0, failed: 0, skipped: 0,
+      candidates: pool.length, recipients: subs.length, emailsSent: 0, matchesSent: 0, skippedEmpty: 0, failed: 0, skipped: 0, capped: 0,
     };
 
     for (const s of subs) {
@@ -356,7 +374,7 @@ export async function runRadarDigest(opts: { dryRun?: boolean; period?: string }
     const subs = [...payingSubscribers(), ...freeSubscribers()];
     const stats = {
       recipients: subs.length, emailsSent: 0, forecastsSent: 0, teasers: 0,
-      failed: 0, skippedEmpty: 0, skippedAlreadySent: 0,
+      failed: 0, skippedEmpty: 0, skippedAlreadySent: 0, skipped: 0, capped: 0,
     };
 
     for (const s of subs) {
@@ -398,6 +416,18 @@ export async function runRadarDigest(opts: { dryRun?: boolean; period?: string }
           stats.emailsSent += 1;
           stats.forecastsSent += shown.length;
           if (!full) stats.teasers += 1;
+        } else if (res.kind === 'capped') {
+          // Deferred to the next run, not sent and not failed: visible, retryable.
+          stats.capped += 1;
+          logEvent('radar.recipient.capped', { subscriberId: s.id });
+        } else if (res.kind === 'suppressed') {
+          // Expected: a bounced/complained address. Not a failure.
+          stats.skipped += 1;
+        } else {
+          stats.failed += 1;
+          logEvent('radar.recipient.failed', {
+            subscriberId: s.id, kind: res.kind, error: res.skipped,
+          });
         }
       } catch (err) {
         stats.failed += 1;

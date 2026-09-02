@@ -165,16 +165,29 @@ async function main(): Promise<void> {
     }
     case 'doctor': {
       // Pre-launch readiness check: fails loudly on anything that would break in production.
+      // "Ready to launch" has a hard meaning: real mail can go out, real money can
+      // come in, real data is being ingested. Any of those being false in production
+      // is a BLOCKER, never a warning — otherwise an operator ships a demo.
       const problems: string[] = [];
       const warn: string[] = [];
+      const prod = config.env === 'production';
       if (config.security.secret === 'dev-insecure-secret-change-me') problems.push('APP_SECRET is still the insecure default');
-      if (!config.baseUrl.startsWith('https://') && config.env === 'production') problems.push('BASE_URL must be https in production');
-      if (config.mail.transport === 'outbox') warn.push('MAIL_TRANSPORT=outbox — no real email will be sent');
+      if (!config.baseUrl.startsWith('https://') && prod) problems.push('BASE_URL must be https in production');
+      if (config.mail.transport === 'outbox') {
+        if (prod) problems.push('MAIL_TRANSPORT=outbox in production — emails are written to files, nobody receives them. Set MAIL_TRANSPORT=smtp and SMTP_URL.');
+        else warn.push('MAIL_TRANSPORT=outbox — no real email will be sent');
+      }
       const mail = await verifyMailConfig();
       if (!mail.ok) problems.push(`SMTP not usable: ${mail.detail}`);
-      if (!stripeEnabled()) warn.push('Stripe not configured — nobody can pay yet');
+      if (!stripeEnabled()) {
+        if (prod) problems.push('Stripe not configured — nobody can pay. Set STRIPE_SECRET_KEY + STRIPE_PRICE_ID (+ STRIPE_EDGE_PRICE_ID for Edge).');
+        else warn.push('Stripe not configured — nobody can pay yet');
+      }
       if (!config.stripe.webhookSecret && stripeEnabled()) problems.push('STRIPE_WEBHOOK_SECRET missing — subscription status will never update');
-      if (config.ted.offline) warn.push('TED_OFFLINE=true — running on fixtures, not live data');
+      if (config.ted.offline) {
+        if (prod) problems.push('TED_OFFLINE=true in production — ingesting demo fixtures, not real notices. Set TED_OFFLINE=false.');
+        else warn.push('TED_OFFLINE=true — running on fixtures, not live data');
+      }
       if (config.brand.legalAddress.includes('Set LEGAL_ADDRESS')) problems.push('LEGAL_ADDRESS not set (required for a German Impressum)');
       if (noticeStats().total === 0) warn.push('no notices indexed yet — run: cli ingest --days 14');
       console.log('\nREADINESS CHECK');

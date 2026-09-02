@@ -426,6 +426,43 @@ export function countForecasts(): number {
 }
 
 /**
+ * Honest self-measurement for the hero feature.
+ *
+ * Every forecast is either eventually confirmed (a matching competition notice is
+ * published inside its predicted window → `superseded_by` is set) or it passes its
+ * window without one (`missed`). Hit rate is superseded / (superseded + missed),
+ * which is the number the €79 tier actually rests on. Exposed on `/healthz` and
+ * `/admin` so there is no "marketing" version of the claim: the model measures
+ * itself, for free, from the same public feed.
+ */
+export function radarStats(opts: { today?: string } = {}): {
+  total: number; open: number; superseded: number; missed: number; hitRatePct: number | null;
+} {
+  const d = db();
+  const today = (opts.today ?? nowIso()).slice(0, 10);
+  const count = (sql: string, ...params: unknown[]): number =>
+    Number((d.prepare(sql).get(...(params as any[])) as any)?.c ?? 0);
+  const total = count('SELECT COUNT(*) AS c FROM forecasts');
+  const open = count(
+    'SELECT COUNT(*) AS c FROM forecasts WHERE superseded_by IS NULL AND window_close >= ?',
+    today,
+  );
+  const superseded = count('SELECT COUNT(*) AS c FROM forecasts WHERE superseded_by IS NOT NULL');
+  const missed = count(
+    'SELECT COUNT(*) AS c FROM forecasts WHERE superseded_by IS NULL AND window_close < ?',
+    today,
+  );
+  const settled = superseded + missed;
+  return {
+    total,
+    open,
+    superseded,
+    missed,
+    hitRatePct: settled ? Math.round((superseded / settled) * 1000) / 10 : null,
+  };
+}
+
+/**
  * The public showcase: a small, FIXED set of forecasts shown in full to
  * everyone, everywhere.
  *
